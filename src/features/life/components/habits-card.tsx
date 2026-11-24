@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useOptimistic, useTransition } from 'react';
 import { toast } from 'sonner';
 
@@ -23,7 +24,13 @@ function applyToday(habit: HabitView, done: boolean): HabitView {
   };
 }
 
-export function HabitsCard({ habits }: { habits: HabitView[] }) {
+export function HabitsCard({
+  habits,
+  showLink = true
+}: {
+  habits: HabitView[];
+  showLink?: boolean;
+}) {
   const [, startTransition] = useTransition();
   const [optimistic, setOptimistic] = useOptimistic(
     habits,
@@ -41,9 +48,19 @@ export function HabitsCard({ habits }: { habits: HabitView[] }) {
   }
 
   return (
-    <SectionCard title='Habits' eyebrow='Rituals'>
+    <SectionCard
+      title='Habits'
+      eyebrow='Rituals'
+      action={
+        showLink && (
+          <Link href='/life/habits' className='text-primary text-xs font-medium hover:underline'>
+            View all
+          </Link>
+        )
+      }
+    >
       {optimistic.length === 0 ? (
-        <EmptyNote>No habits yet. The full habit tracker arrives in Phase 3.</EmptyNote>
+        <EmptyNote>No habits yet. Add one on the Habits page.</EmptyNote>
       ) : (
         <ul className='space-y-3'>
           {optimistic.map((habit) => (

@@ -10,6 +10,7 @@ import { TodayAppointments } from '@/features/kouture/components/today-appointme
 import { loadKoutureDashboard } from '@/features/kouture/server/load-dashboard';
 import { formatDayLong } from '@/lib/dates';
 import { formatCents, percentChange } from '@/lib/money';
+import { BUSINESS } from '@/config/business';
 import { readEnv } from '@/server/env';
 import { requireOwnerPage } from '@/server/session';
 
@@ -66,7 +67,7 @@ export default async function KoutureDashboardPage() {
             today={data.todayAppointments}
             upcoming={data.upcoming}
             timeZone={data.timeZone}
-            bookingUrl={readEnv().NAILZY_BOOKING_URL ?? null}
+            bookingUrl={readEnv().NAILZY_BOOKING_URL ?? BUSINESS.nailzyBookingUrl}
           />
         </div>
         <div className='flex flex-col gap-5 lg:col-span-5'>

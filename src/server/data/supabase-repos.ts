@@ -1,20 +1,12 @@
 import 'server-only';
 
 import { AppError } from '@/server/errors';
+import { createSupabaseEntities } from '@/server/entities/supabase-collection';
 import type { SupabaseServerClient } from '@/server/supabase';
 
-import type {
-  Appointment,
-  Approval,
-  AuditEntry,
-  Expense,
-  Goal,
-  Habit,
-  LifeEvent,
-  Payment,
-  Repositories,
-  Task
-} from './types';
+import { createLifeRepository } from './life-repository';
+
+import type { Appointment, Approval, AuditEntry, Expense, Payment, Repositories } from './types';
 
 type PgError = { message: string; code?: string } | null;
 
@@ -29,24 +21,6 @@ function check<T>(result: { data: T | null; error: PgError }, what: string): T {
   if (result.data === null) throw new AppError('NOT_FOUND', `Could not find ${what}.`);
   return result.data;
 }
-
-type TaskRow = {
-  id: string;
-  title: string;
-  due_on: string | null;
-  priority: Task['priority'];
-  status: Task['status'];
-  completed_at: string | null;
-};
-const TASK_COLUMNS = 'id, title, due_on, priority, status, completed_at';
-const toTask = (r: TaskRow): Task => ({
-  id: r.id,
-  title: r.title,
-  dueOn: r.due_on,
-  priority: r.priority,
-  status: r.status,
-  completedAt: r.completed_at
-});
 
 type ApprovalRow = {
   id: string;
@@ -85,149 +59,13 @@ export function createSupabaseRepositories(
   db: SupabaseServerClient,
   ownerEmail: string
 ): Repositories {
-  const life = db.schema('life');
+  const entities = createSupabaseEntities(db);
   const kouture = db.schema('kouture');
   const core = db.schema('core');
 
   return {
-    life: {
-      async listOpenTasks(limit) {
-        const rows = check(
-          await life
-            .from('tasks')
-            .select(TASK_COLUMNS)
-            .eq('status', 'open')
-            .order('due_on', { ascending: true, nullsFirst: false })
-            .limit(limit),
-          'load tasks'
-        ) as TaskRow[];
-        return rows.map(toTask);
-      },
-      async setTaskDone(id, done) {
-        const row = check(
-          await life
-            .from('tasks')
-            .update({
-              status: done ? 'done' : 'open',
-              completed_at: done ? new Date().toISOString() : null
-            })
-            .eq('id', id)
-            .select(TASK_COLUMNS)
-            .single(),
-          'update that task'
-        ) as TaskRow;
-        return toTask(row);
-      },
-      async listHabits({ fromDay, toDay }) {
-        const habits = check(
-          await life
-            .from('habits')
-            .select('id, name, target_per_week')
-            .eq('archived', false)
-            .order('sort_order'),
-          'load habits'
-        ) as { id: string; name: string; target_per_week: number }[];
-        const logs = check(
-          await life
-            .from('habit_logs')
-            .select('habit_id, logged_on')
-            .gte('logged_on', fromDay)
-            .lte('logged_on', toDay),
-          'load habit check-ins'
-        ) as { habit_id: string; logged_on: string }[];
-        const byHabit = new Map<string, string[]>();
-        for (const log of logs) {
-          const list = byHabit.get(log.habit_id) ?? [];
-          list.push(log.logged_on);
-          byHabit.set(log.habit_id, list);
-        }
-        return habits.map((h): Habit => ({
-          id: h.id,
-          name: h.name,
-          targetPerWeek: h.target_per_week,
-          loggedDays: (byHabit.get(h.id) ?? []).toSorted()
-        }));
-      },
-      async setHabitLogged(habitId, day, logged) {
-        if (logged) {
-          check(
-            await life
-              .from('habit_logs')
-              .upsert(
-                { habit_id: habitId, logged_on: day },
-                { onConflict: 'habit_id,logged_on', ignoreDuplicates: true }
-              )
-              .select('id'),
-            'check in that habit'
-          );
-        } else {
-          check(
-            await life
-              .from('habit_logs')
-              .delete()
-              .eq('habit_id', habitId)
-              .eq('logged_on', day)
-              .select('id'),
-            'undo that check-in'
-          );
-        }
-      },
-      async listEvents(range) {
-        const rows = check(
-          await life
-            .from('events')
-            .select('id, title, category, starts_at, ends_at, location')
-            .gte('starts_at', range.from)
-            .lt('starts_at', range.to)
-            .order('starts_at'),
-          'load events'
-        ) as {
-          id: string;
-          title: string;
-          category: LifeEvent['category'];
-          starts_at: string;
-          ends_at: string;
-          location: string | null;
-        }[];
-        return rows.map((r) => ({
-          id: r.id,
-          title: r.title,
-          category: r.category,
-          startsAt: r.starts_at,
-          endsAt: r.ends_at,
-          location: r.location
-        }));
-      },
-      async listActiveGoals() {
-        const rows = check(
-          await life
-            .from('goals')
-            .select('id, title, area, target_value, current_value, unit, target_date, status')
-            .eq('status', 'active')
-            .order('target_date', { ascending: true, nullsFirst: false }),
-          'load goals'
-        ) as {
-          id: string;
-          title: string;
-          area: Goal['area'];
-          target_value: number | string;
-          current_value: number | string;
-          unit: string | null;
-          target_date: string | null;
-          status: Goal['status'];
-        }[];
-        return rows.map((r) => ({
-          id: r.id,
-          title: r.title,
-          area: r.area,
-          targetValue: Number(r.target_value),
-          currentValue: Number(r.current_value),
-          unit: r.unit,
-          targetDate: r.target_date,
-          status: r.status
-        }));
-      }
-    },
+    life: createLifeRepository(entities),
+    entities,
 
     kouture: {
       async listAppointments(range) {

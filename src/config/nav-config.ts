@@ -14,33 +14,34 @@ export const NAV: Record<Environment, NavGroup[]> = {
       label: 'Today',
       items: [
         { title: 'Dashboard', url: '/life', icon: 'home' },
-        { title: 'Daily planner', url: '/life/planner', icon: 'planner', comingInPhase: 3 },
-        { title: 'Calendar', url: '/life/calendar', icon: 'calendarEvent', comingInPhase: 3 },
-        { title: 'Tasks', url: '/life/tasks', icon: 'checklist', comingInPhase: 3 },
-        { title: 'Habits', url: '/life/habits', icon: 'habit', comingInPhase: 3 }
+        { title: 'Daily planner', url: '/life/planner', icon: 'planner' },
+        { title: 'Calendar', url: '/life/calendar', icon: 'calendarEvent' },
+        { title: 'Tasks', url: '/life/tasks', icon: 'checklist' },
+        { title: 'Habits', url: '/life/habits', icon: 'habit' }
       ]
     },
     {
       label: 'Money',
       items: [
-        { title: 'Budget', url: '/life/budget', icon: 'wallet', comingInPhase: 3 },
-        { title: 'Savings goals', url: '/life/savings', icon: 'savings', comingInPhase: 3 }
+        { title: 'Budget', url: '/life/budget', icon: 'wallet' },
+        { title: 'Savings goals', url: '/life/savings', icon: 'savings' }
       ]
     },
     {
       label: 'Wellness',
       items: [
-        { title: 'Fitness', url: '/life/fitness', icon: 'fitness', comingInPhase: 3 },
-        { title: 'Meal planning', url: '/life/meals', icon: 'meals', comingInPhase: 3 },
-        { title: 'Beauty & self-care', url: '/life/self-care', icon: 'selfCare', comingInPhase: 3 }
+        { title: 'Fitness', url: '/life/fitness', icon: 'fitness' },
+        { title: 'Workout plan', url: '/life/workouts', icon: 'planner' },
+        { title: 'Meal planning', url: '/life/meals', icon: 'meals' },
+        { title: 'Beauty & self-care', url: '/life/self-care', icon: 'selfCare' }
       ]
     },
     {
       label: 'Dreams',
       items: [
-        { title: 'Goals', url: '/life/goals', icon: 'goal', comingInPhase: 3 },
-        { title: 'Travel', url: '/life/travel', icon: 'travel', comingInPhase: 3 },
-        { title: 'Journal', url: '/life/journal', icon: 'journal', comingInPhase: 3 }
+        { title: 'Goals', url: '/life/goals', icon: 'goal' },
+        { title: 'Travel', url: '/life/travel', icon: 'travel' },
+        { title: 'Journal', url: '/life/journal', icon: 'journal' }
       ]
     }
   ],

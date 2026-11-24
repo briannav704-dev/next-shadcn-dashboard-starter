@@ -1,0 +1,494 @@
+import { z } from 'zod';
+
+// One definition per record type: where it lives, what a stored row looks
+// like (camelCase), and what may be written. Both the Supabase and the
+// sample-data implementations use these, so validation is identical in both.
+
+const dateKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a valid date.');
+const dateTime = z
+  .string()
+  .refine((v) => !Number.isNaN(Date.parse(v)), 'Choose a valid date and time.');
+const cents = z.number().int('Use whole cents.').min(0).max(100_000_000);
+
+function text(max: number, label = 'This') {
+  return z.string().trim().min(1, `${label} is required.`).max(max, `${label} is too long.`);
+}
+function optionalText(max: number) {
+  return z
+    .string()
+    .trim()
+    .max(max, 'Too long.')
+    .nullish()
+    .transform((v) => (v ? v : null));
+}
+const optionalDate = dateKey.nullish().transform((v) => v ?? null);
+const optionalCents = cents.nullish().transform((v) => v ?? null);
+
+const id = z.string().min(1);
+const num = z.coerce.number();
+const nullableNum = z.coerce.number().nullable();
+
+export const WORKOUT_KINDS = [
+  'strength',
+  'cardio',
+  'pilates',
+  'yoga',
+  'walk',
+  'dance',
+  'other'
+] as const;
+export const SELFCARE_CATEGORIES = [
+  'nails',
+  'hair',
+  'skin',
+  'lashes',
+  'brows',
+  'body',
+  'spa',
+  'wellness',
+  'other'
+] as const;
+export const EVENT_CATEGORIES = [
+  'personal',
+  'self_care',
+  'fitness',
+  'travel',
+  'social',
+  'other'
+] as const;
+export const GOAL_AREAS = ['personal', 'health', 'money', 'beauty', 'growth', 'travel'] as const;
+export const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+export const TRIP_ITEM_KINDS = ['flight', 'stay', 'activity', 'dining', 'packing'] as const;
+
+function entity<TRow extends z.ZodObject, TInput extends z.ZodObject>(def: {
+  schema: 'life' | 'kouture';
+  table: string;
+  row: TRow;
+  input: TInput;
+  label: (row: z.infer<TRow>) => string;
+  /** App paths whose data changes when this entity changes. */
+  paths: string[];
+  /** Unique key used for "save for this day" style upserts. */
+  uniqueBy?: (keyof z.infer<TInput> & string)[];
+  /** Foreign keys, mirrored by the sample-data store (the database enforces them itself). */
+  refs?: Partial<
+    Record<keyof z.infer<TInput> & string, { entity: string; onDelete: 'cascade' | 'setNull' }>
+  >;
+}) {
+  return def;
+}
+
+export const ENTITIES = {
+  'life.tasks': entity({
+    schema: 'life',
+    table: 'tasks',
+    row: z.object({
+      id,
+      title: z.string(),
+      notes: z.string().nullable(),
+      dueOn: z.string().nullable(),
+      priority: z.enum(['low', 'normal', 'high']),
+      status: z.enum(['open', 'done', 'archived']),
+      completedAt: z.string().nullable()
+    }),
+    input: z.object({
+      title: text(300, 'Title'),
+      notes: optionalText(2000),
+      dueOn: optionalDate,
+      priority: z.enum(['low', 'normal', 'high']).default('normal'),
+      status: z.enum(['open', 'done', 'archived']).default('open'),
+      completedAt: dateTime.nullish().transform((v) => v ?? null)
+    }),
+    label: (r) => r.title,
+    paths: ['/life', '/life/tasks', '/life/planner']
+  }),
+  'life.events': entity({
+    schema: 'life',
+    table: 'events',
+    row: z.object({
+      id,
+      title: z.string(),
+      category: z.enum(EVENT_CATEGORIES),
+      startsAt: z.string(),
+      endsAt: z.string(),
+      location: z.string().nullable(),
+      notes: z.string().nullable()
+    }),
+    input: z
+      .object({
+        title: text(200, 'Title'),
+        category: z.enum(EVENT_CATEGORIES).default('personal'),
+        startsAt: dateTime,
+        endsAt: dateTime,
+        location: optionalText(200),
+        notes: optionalText(2000)
+      })
+      .refine((v) => Date.parse(v.endsAt) >= Date.parse(v.startsAt), {
+        message: 'End must be after the start.',
+        path: ['endsAt']
+      }),
+    label: (r) => r.title,
+    paths: ['/life', '/life/calendar', '/life/planner']
+  }),
+  'life.habits': entity({
+    schema: 'life',
+    table: 'habits',
+    row: z.object({
+      id,
+      name: z.string(),
+      targetPerWeek: num,
+      sortOrder: num,
+      archived: z.boolean()
+    }),
+    input: z.object({
+      name: text(120, 'Name'),
+      targetPerWeek: z.number().int().min(1).max(7).default(7),
+      sortOrder: z.number().int().min(0).max(1000).default(0),
+      archived: z.boolean().default(false)
+    }),
+    label: (r) => r.name,
+    paths: ['/life', '/life/habits']
+  }),
+  'life.habit_logs': entity({
+    schema: 'life',
+    table: 'habit_logs',
+    row: z.object({ id, habitId: z.string(), loggedOn: z.string() }),
+    input: z.object({ habitId: id, loggedOn: dateKey }),
+    label: (r) => r.loggedOn,
+    paths: ['/life', '/life/habits'],
+    uniqueBy: ['habitId', 'loggedOn'],
+    refs: { habitId: { entity: 'life.habits', onDelete: 'cascade' } }
+  }),
+  'life.goals': entity({
+    schema: 'life',
+    table: 'goals',
+    row: z.object({
+      id,
+      title: z.string(),
+      area: z.enum(GOAL_AREAS),
+      targetValue: num,
+      currentValue: num,
+      unit: z.string().nullable(),
+      targetDate: z.string().nullable(),
+      status: z.enum(['active', 'achieved', 'paused'])
+    }),
+    input: z.object({
+      title: text(200, 'Title'),
+      area: z.enum(GOAL_AREAS).default('personal'),
+      targetValue: z.number().positive('Target must be above zero.').max(1e9),
+      currentValue: z.number().min(0).max(1e9).default(0),
+      unit: optionalText(20),
+      targetDate: optionalDate,
+      status: z.enum(['active', 'achieved', 'paused']).default('active')
+    }),
+    label: (r) => r.title,
+    paths: ['/life', '/life/goals']
+  }),
+  'life.day_plans': entity({
+    schema: 'life',
+    table: 'day_plans',
+    row: z.object({
+      id,
+      day: z.string(),
+      intention: z.string().nullable(),
+      priorities: z.array(z.string()),
+      notes: z.string().nullable()
+    }),
+    input: z.object({
+      day: dateKey,
+      intention: optionalText(280),
+      priorities: z
+        .array(z.string().trim().max(160))
+        .max(3)
+        .default([])
+        .transform((a) => a.filter(Boolean)),
+      notes: optionalText(5000)
+    }),
+    label: (r) => r.day,
+    paths: ['/life/planner'],
+    uniqueBy: ['day']
+  }),
+  'life.budget_categories': entity({
+    schema: 'life',
+    table: 'budget_categories',
+    row: z.object({
+      id,
+      name: z.string(),
+      kind: z.enum(['expense', 'income']),
+      monthlyLimitCents: nullableNum,
+      sortOrder: num,
+      archived: z.boolean()
+    }),
+    input: z.object({
+      name: text(80, 'Name'),
+      kind: z.enum(['expense', 'income']).default('expense'),
+      monthlyLimitCents: optionalCents,
+      sortOrder: z.number().int().min(0).max(1000).default(0),
+      archived: z.boolean().default(false)
+    }),
+    label: (r) => r.name,
+    paths: ['/life/budget']
+  }),
+  'life.transactions': entity({
+    schema: 'life',
+    table: 'transactions',
+    row: z.object({
+      id,
+      occurredOn: z.string(),
+      kind: z.enum(['expense', 'income']),
+      amountCents: num,
+      categoryId: z.string().nullable(),
+      description: z.string()
+    }),
+    input: z.object({
+      occurredOn: dateKey,
+      kind: z.enum(['expense', 'income']).default('expense'),
+      amountCents: cents.min(1, 'Enter an amount.'),
+      categoryId: z
+        .string()
+        .nullish()
+        .transform((v) => v || null),
+      description: text(200, 'Description')
+    }),
+    label: (r) => r.description,
+    paths: ['/life/budget'],
+    refs: { categoryId: { entity: 'life.budget_categories', onDelete: 'setNull' } }
+  }),
+  'life.savings_goals': entity({
+    schema: 'life',
+    table: 'savings_goals',
+    row: z.object({
+      id,
+      name: z.string(),
+      targetCents: num,
+      targetDate: z.string().nullable(),
+      status: z.enum(['active', 'achieved', 'paused'])
+    }),
+    input: z.object({
+      name: text(120, 'Name'),
+      targetCents: cents.min(1, 'Enter a target.'),
+      targetDate: optionalDate,
+      status: z.enum(['active', 'achieved', 'paused']).default('active')
+    }),
+    label: (r) => r.name,
+    paths: ['/life/savings']
+  }),
+  'life.savings_contributions': entity({
+    schema: 'life',
+    table: 'savings_contributions',
+    row: z.object({
+      id,
+      goalId: z.string(),
+      amountCents: num,
+      contributedOn: z.string(),
+      note: z.string().nullable()
+    }),
+    input: z.object({
+      goalId: id,
+      amountCents: z
+        .number()
+        .int()
+        .min(-100_000_000)
+        .max(100_000_000)
+        .refine((v) => v !== 0, 'Enter an amount.'),
+      contributedOn: dateKey,
+      note: optionalText(200)
+    }),
+    label: (r) => r.contributedOn,
+    paths: ['/life/savings'],
+    refs: { goalId: { entity: 'life.savings_goals', onDelete: 'cascade' } }
+  }),
+  'life.workout_logs': entity({
+    schema: 'life',
+    table: 'workout_logs',
+    row: z.object({
+      id,
+      performedOn: z.string(),
+      kind: z.enum(WORKOUT_KINDS),
+      title: z.string(),
+      durationMinutes: num,
+      intensity: z.enum(['easy', 'moderate', 'hard']),
+      notes: z.string().nullable()
+    }),
+    input: z.object({
+      performedOn: dateKey,
+      kind: z.enum(WORKOUT_KINDS),
+      title: text(120, 'Title'),
+      durationMinutes: z.number().int().min(1, 'Add a duration.').max(600),
+      intensity: z.enum(['easy', 'moderate', 'hard']).default('moderate'),
+      notes: optionalText(2000)
+    }),
+    label: (r) => r.title,
+    paths: ['/life/fitness', '/life/workouts']
+  }),
+  'life.workout_plans': entity({
+    schema: 'life',
+    table: 'workout_plans',
+    row: z.object({
+      id,
+      weekday: num,
+      kind: z.enum(WORKOUT_KINDS),
+      title: z.string(),
+      durationMinutes: num,
+      exercises: z.string().nullable()
+    }),
+    input: z.object({
+      weekday: z.number().int().min(1).max(7),
+      kind: z.enum(WORKOUT_KINDS),
+      title: text(120, 'Title'),
+      durationMinutes: z.number().int().min(1, 'Add a duration.').max(600),
+      exercises: optionalText(2000)
+    }),
+    label: (r) => r.title,
+    paths: ['/life/workouts']
+  }),
+  'life.meals': entity({
+    schema: 'life',
+    table: 'meals',
+    row: z.object({
+      id,
+      day: z.string(),
+      slot: z.enum(MEAL_SLOTS),
+      title: z.string(),
+      notes: z.string().nullable()
+    }),
+    input: z.object({
+      day: dateKey,
+      slot: z.enum(MEAL_SLOTS),
+      title: text(120, 'Meal'),
+      notes: optionalText(1000)
+    }),
+    label: (r) => r.title,
+    paths: ['/life/meals']
+  }),
+  'life.grocery_items': entity({
+    schema: 'life',
+    table: 'grocery_items',
+    row: z.object({ id, name: z.string(), quantity: z.string().nullable(), checked: z.boolean() }),
+    input: z.object({
+      name: text(120, 'Item'),
+      quantity: optionalText(40),
+      checked: z.boolean().default(false)
+    }),
+    label: (r) => r.name,
+    paths: ['/life/meals']
+  }),
+  'life.trips': entity({
+    schema: 'life',
+    table: 'trips',
+    row: z.object({
+      id,
+      name: z.string(),
+      destination: z.string(),
+      startsOn: z.string(),
+      endsOn: z.string(),
+      budgetCents: nullableNum,
+      status: z.enum(['planning', 'booked', 'done']),
+      notes: z.string().nullable()
+    }),
+    input: z
+      .object({
+        name: text(120, 'Trip name'),
+        destination: text(120, 'Destination'),
+        startsOn: dateKey,
+        endsOn: dateKey,
+        budgetCents: optionalCents,
+        status: z.enum(['planning', 'booked', 'done']).default('planning'),
+        notes: optionalText(5000)
+      })
+      .refine((v) => v.endsOn >= v.startsOn, {
+        message: 'Return must be after departure.',
+        path: ['endsOn']
+      }),
+    label: (r) => r.name,
+    paths: ['/life/travel']
+  }),
+  'life.trip_items': entity({
+    schema: 'life',
+    table: 'trip_items',
+    row: z.object({
+      id,
+      tripId: z.string(),
+      kind: z.enum(TRIP_ITEM_KINDS),
+      title: z.string(),
+      onDay: z.string().nullable(),
+      costCents: nullableNum,
+      done: z.boolean()
+    }),
+    input: z.object({
+      tripId: id,
+      kind: z.enum(TRIP_ITEM_KINDS),
+      title: text(160, 'Item'),
+      onDay: optionalDate,
+      costCents: optionalCents,
+      done: z.boolean().default(false)
+    }),
+    label: (r) => r.title,
+    paths: ['/life/travel'],
+    refs: { tripId: { entity: 'life.trips', onDelete: 'cascade' } }
+  }),
+  'life.selfcare_routines': entity({
+    schema: 'life',
+    table: 'selfcare_routines',
+    row: z.object({
+      id,
+      name: z.string(),
+      category: z.enum(SELFCARE_CATEGORIES),
+      everyDays: num,
+      lastDoneOn: z.string().nullable(),
+      provider: z.string().nullable(),
+      notes: z.string().nullable(),
+      archived: z.boolean()
+    }),
+    input: z.object({
+      name: text(120, 'Name'),
+      category: z.enum(SELFCARE_CATEGORIES),
+      everyDays: z.number().int().min(1, 'At least every day.').max(365),
+      lastDoneOn: optionalDate,
+      provider: optionalText(120),
+      notes: optionalText(1000),
+      archived: z.boolean().default(false)
+    }),
+    label: (r) => r.name,
+    paths: ['/life/self-care', '/life']
+  }),
+  'life.journal_entries': entity({
+    schema: 'life',
+    table: 'journal_entries',
+    row: z.object({
+      id,
+      entryOn: z.string(),
+      mood: nullableNum,
+      title: z.string().nullable(),
+      body: z.string().nullable(),
+      gratitude: z.string().nullable()
+    }),
+    input: z.object({
+      entryOn: dateKey,
+      mood: z
+        .number()
+        .int()
+        .min(1)
+        .max(5)
+        .nullish()
+        .transform((v) => v ?? null),
+      title: optionalText(160),
+      body: optionalText(20000),
+      gratitude: optionalText(2000)
+    }),
+    // Never echo journal contents into logs.
+    label: (r) => r.entryOn,
+    paths: ['/life/journal'],
+    uniqueBy: ['entryOn']
+  })
+};
+
+export type EntityKey = keyof typeof ENTITIES;
+export type EntityDef<K extends EntityKey> = (typeof ENTITIES)[K];
+export type RowOf<K extends EntityKey> = z.infer<EntityDef<K>['row']>;
+export type InputOf<K extends EntityKey> = z.input<EntityDef<K>['input']>;
+export type CleanInputOf<K extends EntityKey> = z.output<EntityDef<K>['input']>;
+
+export function isEntityKey(value: string): value is EntityKey {
+  return Object.prototype.hasOwnProperty.call(ENTITIES, value);
+}

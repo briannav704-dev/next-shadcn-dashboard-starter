@@ -16,6 +16,8 @@ export async function toggleTaskAction(
     const { repos } = await requireOwnerAction();
     await repos.life.setTaskDone(taskId, done);
     revalidatePath('/life');
+    revalidatePath('/life/tasks');
+    revalidatePath('/life/planner');
     return undefined;
   });
 }
@@ -30,6 +32,7 @@ export async function toggleHabitTodayAction(
     // "Today" is computed on the server in the owner's timezone, never trusted from the client.
     await repos.life.setHabitLogged(habitId, todayKey(profile.timezone), done);
     revalidatePath('/life');
+    revalidatePath('/life/habits');
     return undefined;
   });
 }

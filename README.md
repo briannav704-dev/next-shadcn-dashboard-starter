@@ -13,8 +13,8 @@ Built with Next.js 16, Supabase (Postgres, Auth, Row Level Security), shadcn/ui 
 |---|---|---|
 | 1 | Repository review and architecture | Done, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | 2 | Design system, auth, data layer, dashboards, approvals, audit log | Done |
-| 3 | My Life modules | Next |
-| 4 | Kouture business modules | |
+| 3 | My Life modules: planner, calendar, tasks, habits, budget, savings, fitness, workouts, meals, travel, self-care, goals, journal | Done |
+| 4 | Kouture business modules | Next |
 | 5 | AI management team | |
 | 6 | Integrations and approval executor | |
 | 7 | Security testing, backups, deployment | |
@@ -27,7 +27,7 @@ cp .env.example .env.local
 bun run dev
 ```
 
-Going live: [docs/SETUP.md](docs/SETUP.md).
+Going live: [docs/SETUP-IPAD.md](docs/SETUP-IPAD.md) (iPad, no computer needed) or [docs/SETUP.md](docs/SETUP.md).
 
 ## Security at a glance
 

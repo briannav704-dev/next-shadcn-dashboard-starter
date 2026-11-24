@@ -1,3 +1,5 @@
+import type { EntityAccess } from '@/server/entities/collection';
+
 // Application-level shapes. Repositories map database rows into these, so pages
 // and components never depend on table layouts.
 
@@ -185,6 +187,8 @@ export interface CoreRepository {
 
 export type Repositories = {
   life: LifeRepository;
+  /** Generic, validated access to every My Life record type. */
+  entities: EntityAccess;
   kouture: KoutureRepository;
   core: CoreRepository;
 };

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { SectionCard } from '@/components/lux/section-card';
 import { EmptyNote } from '@/components/lux/empty-note';
 import { addDays, dayKey, daysBetween, formatDayShort, formatTime } from '@/lib/dates';
@@ -42,7 +43,15 @@ export function WeekStrip({
     .slice(0, 5);
 
   return (
-    <SectionCard title='Your week' eyebrow='Calendar'>
+    <SectionCard
+      title='Your week'
+      eyebrow='Calendar'
+      action={
+        <Link href='/life/calendar' className='text-primary text-xs font-medium hover:underline'>
+          Calendar
+        </Link>
+      }
+    >
       <ol className='grid grid-cols-7 gap-1.5' aria-label='Next seven days'>
         {days.map((day) => {
           const list = byDay.get(day) ?? [];

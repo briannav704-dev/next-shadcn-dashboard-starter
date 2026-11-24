@@ -48,3 +48,17 @@ export function habitCompletionToday(views: HabitView[]): number {
 export function goalProgress(goal: Goal): number {
   return Math.max(0, Math.min(1, goal.currentValue / goal.targetValue));
 }
+
+/** Longest run of consecutive logged days. */
+export function bestStreak(loggedDays: string[]): number {
+  const sorted = [...new Set(loggedDays)].toSorted();
+  let best = 0;
+  let run = 0;
+  let prev: string | null = null;
+  for (const day of sorted) {
+    run = prev && addDays(prev, 1) === day ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = day;
+  }
+  return best;
+}

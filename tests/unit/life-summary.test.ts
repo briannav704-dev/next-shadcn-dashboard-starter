@@ -40,3 +40,13 @@ describe('habits', () => {
     expect(goalProgress({ ...base, targetValue: 100, currentValue: 140 })).toBe(1);
   });
 });
+
+describe('bestStreak', () => {
+  it('finds the longest consecutive run', async () => {
+    const { bestStreak } = await import('@/features/life/lib/summary');
+    expect(bestStreak(['2026-11-01', '2026-11-02', '2026-11-04', '2026-11-05', '2026-11-06'])).toBe(
+      3
+    );
+    expect(bestStreak([])).toBe(0);
+  });
+});

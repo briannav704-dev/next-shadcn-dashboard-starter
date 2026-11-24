@@ -18,7 +18,8 @@
     "format:check": "oxfmt --check . '!**/*.md' '!**/*.mdc' '!**/*.mdx' '!**/*.yml' '!**/*.yaml'",
     "prepare": "husky",
     "test": "vitest run",
-    "test:db": "bash supabase/tests/run.sh"
+    "test:db": "node scripts/build-setup-sql.mjs --check && bash supabase/tests/run.sh",
+    "db:bundle": "node scripts/build-setup-sql.mjs"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.142",

@@ -20,9 +20,10 @@ fi
 
 PSQL=(psql -X -q -v ON_ERROR_STOP=1 -h "$WORK" -p "$PORT" -U postgres -d postgres)
 "${PSQL[@]}" -f "$HERE/00_supabase_stub.sql"
-for f in "$ROOT"/supabase/migrations/*.sql; do
-  echo "migrate: $(basename "$f")"
-  "${PSQL[@]}" -f "$f"
+# Apply the bundled file exactly as the owner pastes it into the Supabase SQL Editor.
+echo "apply: supabase/setup.sql"
+"${PSQL[@]}" -f "$ROOT/supabase/setup.sql"
+for t in "$HERE"/[1-9]*.test.sql; do
+  "${PSQL[@]}" -t -A -f "$t" | grep '^ok' || { echo "security tests FAILED in $(basename "$t")"; exit 1; }
 done
-"${PSQL[@]}" -t -A -f "$HERE/10_security.test.sql" | grep '^ok' || { echo 'security tests FAILED'; exit 1; }
 echo 'all database security tests passed'

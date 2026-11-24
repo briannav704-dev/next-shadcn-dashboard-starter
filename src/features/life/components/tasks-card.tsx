@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useOptimistic, useTransition } from 'react';
 import { toast } from 'sonner';
 
@@ -43,7 +44,11 @@ export function TasksCard({ tasks, today }: { tasks: Task[]; today: string }) {
     <SectionCard
       title='Tasks'
       eyebrow='To do'
-      action={<span className='text-muted-foreground text-xs tabular-nums'>{openCount} open</span>}
+      action={
+        <Link href='/life/tasks' className='text-primary text-xs font-medium hover:underline'>
+          {openCount} open · View all
+        </Link>
+      }
     >
       {optimistic.length === 0 ? (
         <EmptyNote>Nothing on your list. Beautiful.</EmptyNote>

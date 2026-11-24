@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { EmptyNote } from '@/components/lux/empty-note';
 import { SectionCard } from '@/components/lux/section-card';
 import type { Goal } from '@/server/data/types';
@@ -11,7 +12,15 @@ function formatValue(value: number, unit: string | null) {
 
 export function GoalsCard({ goals }: { goals: Goal[] }) {
   return (
-    <SectionCard title='Goals' eyebrow='Becoming'>
+    <SectionCard
+      title='Goals'
+      eyebrow='Becoming'
+      action={
+        <Link href='/life/goals' className='text-primary text-xs font-medium hover:underline'>
+          View all
+        </Link>
+      }
+    >
       {goals.length === 0 ? (
         <EmptyNote>Set a goal and watch it fill in.</EmptyNote>
       ) : (
