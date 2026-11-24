@@ -34,6 +34,37 @@ export async function requestMagicLinkAction(input: { email: string }): Promise<
   });
 }
 
+const verifySchema = z.object({
+  email: z.email('Enter a valid email address.').transform((v) => v.trim().toLowerCase()),
+  code: z
+    .string()
+    .transform((v) => v.replace(/\s/g, ''))
+    .pipe(z.string().regex(/^\d{6,10}$/, 'Enter the code from the email.'))
+});
+
+/**
+ * Signs in with the code from the sign-in email. The emailed link opens in
+ * Safari, so the Home Screen app (separate cookies on iOS) needs this route.
+ */
+export async function verifySignInCodeAction(input: {
+  email: string;
+  code: string;
+}): Promise<ActionResult> {
+  return runAction(verifySchema, input, async ({ email, code }) => {
+    if (getAppMode() !== 'supabase')
+      throw new AppError('INVALID', 'Email sign-in is not set up yet.');
+    const wrong = new AppError('INVALID', 'That code didn’t work. Check it, or request a new one.');
+    if (email !== readEnv().OWNER_EMAIL) throw wrong;
+    const db = await createSupabaseServerClient();
+    const { data, error } = await db.auth.verifyOtp({ email, token: code, type: 'email' });
+    if (error || data.user?.email?.toLowerCase() !== readEnv().OWNER_EMAIL) {
+      await db.auth.signOut();
+      throw wrong;
+    }
+    return undefined;
+  });
+}
+
 export async function startDemoSessionAction(): Promise<void> {
   if (getAppMode() !== 'demo') throw new AppError('FORBIDDEN', 'Sample mode is disabled.');
   const store = await cookies();
