@@ -65,7 +65,8 @@ export const NAV: Record<Environment, NavGroup[]> = {
       items: [
         { title: 'Revenue & expenses', url: '/kouture/money', icon: 'cash' },
         { title: 'Profit reports', url: '/kouture/reports', icon: 'receipt' },
-        { title: 'Analytics', url: '/kouture/analytics', icon: 'analytics' }
+        { title: 'Analytics', url: '/kouture/analytics', icon: 'analytics' },
+        { title: 'Taxes', url: '/kouture/taxes', icon: 'forms' }
       ]
     },
     {

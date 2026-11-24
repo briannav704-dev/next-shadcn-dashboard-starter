@@ -274,6 +274,23 @@ export function seedKoutureTables(opts: {
     'kouture.inventory_items': inventory,
     'kouture.marketing_items': marketing,
     'kouture.policies': policies,
-    'kouture.sync_runs': []
+    'kouture.sync_runs': [],
+    'kouture.tax_payments': (
+      [
+        [1, '04-14', 120000],
+        [2, '06-13', 95000],
+        [3, '09-12', 110000]
+      ] as const
+    )
+      .map(([quarter, day, amountCents]) => ({
+        id: id('tax'),
+        taxYear: Number(today.slice(0, 4)),
+        quarter,
+        jurisdiction: 'federal',
+        amountCents,
+        paidOn: `${today.slice(0, 4)}-${day}`,
+        note: 'IRS Direct Pay'
+      }))
+      .filter((p) => p.paidOn <= today)
   };
 }

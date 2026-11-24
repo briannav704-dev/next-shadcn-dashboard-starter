@@ -787,6 +787,29 @@ export const ENTITIES = {
     label: (r) => r.title,
     paths: ['/kouture/policies']
   }),
+  'kouture.tax_payments': entity({
+    schema: 'kouture',
+    table: 'tax_payments',
+    row: z.object({
+      id,
+      taxYear: num,
+      quarter: num,
+      jurisdiction: z.enum(['federal', 'state']),
+      amountCents: num,
+      paidOn: z.string(),
+      note: z.string().nullable()
+    }),
+    input: z.object({
+      taxYear: z.number().int().min(2000).max(2100),
+      quarter: z.number().int().min(1).max(4),
+      jurisdiction: z.enum(['federal', 'state']).default('federal'),
+      amountCents: cents.min(1, 'Enter an amount.'),
+      paidOn: dateKey,
+      note: optionalText(300)
+    }),
+    label: (r) => `${r.jurisdiction} Q${r.quarter} ${r.taxYear}`,
+    paths: ['/kouture/taxes']
+  }),
   'kouture.sync_runs': entity({
     schema: 'kouture',
     table: 'sync_runs',
