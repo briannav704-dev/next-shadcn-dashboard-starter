@@ -30,13 +30,22 @@ export function LifeHero({
       text: `${salonBookingsToday} ${salonBookingsToday === 1 ? 'client' : 'clients'} at the salon`
     }
   ];
+  const habitRatio = habitsTotal ? habitsDone / habitsTotal : 0;
   return (
     <section className='lux-card hero-wash relative overflow-hidden p-6 md:p-8' aria-label='Today'>
       <div className='flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between'>
         <div className='min-w-0'>
-          <p className='text-gold-ink text-xs font-medium tracking-[0.22em] uppercase'>
-            {formatDayLong(today)}
-          </p>
+          <div className='flex items-start justify-between gap-3'>
+            <p className='text-gold-ink pt-1 text-xs font-medium tracking-[0.22em] uppercase'>
+              {formatDayLong(today)}
+            </p>
+            <ProgressRing
+              value={habitRatio}
+              size={64}
+              stroke={5}
+              className='-mt-1 shrink-0 sm:hidden'
+            />
+          </div>
           <h1 className='font-display mt-2 text-4xl leading-tight font-medium text-balance md:text-5xl'>
             {greeting}, <em className='text-rose font-normal'>{name}</em>
           </h1>
@@ -53,10 +62,10 @@ export function LifeHero({
           </ul>
         </div>
         <ProgressRing
-          value={habitsTotal ? habitsDone / habitsTotal : 0}
+          value={habitRatio}
           size={112}
           label='Habits'
-          className='shrink-0 self-start sm:self-center'
+          className='hidden shrink-0 self-center sm:grid'
         />
       </div>
     </section>

@@ -52,7 +52,10 @@ export function ProgressRing({
       </svg>
       <div className='absolute inset-0 grid place-items-center text-center'>
         <div>
-          <p className='font-display text-2xl leading-none font-medium tabular-nums'>
+          <p
+            className='font-display leading-none font-medium'
+            style={{ fontSize: Math.round(size / 4.5) }}
+          >
             {Math.round(clamped * 100)}%
           </p>
           {label && (
