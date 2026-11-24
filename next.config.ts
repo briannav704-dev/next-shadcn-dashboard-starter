@@ -1,31 +1,24 @@
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs/config';
 
-// Define the base Next.js configuration
+const securityHeaders = [
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+  { key: 'X-Robots-Tag', value: 'noindex, nofollow' }
+];
+
 const baseConfig: NextConfig = {
   output: process.env.BUILD_STANDALONE === 'true' ? 'standalone' : undefined,
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'api.slingacademy.com',
-        port: ''
-      },
-      {
-        protocol: 'https',
-        hostname: 'img.clerk.com',
-        port: ''
-      },
-      {
-        protocol: 'https',
-        hostname: 'clerk.com',
-        port: ''
-      }
-    ]
-  },
-  transpilePackages: ['geist'],
+  poweredByHeader: false,
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production'
+    // Keep error/warn so server failures still reach the logs and Sentry.
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false
+  },
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
   }
 };
 
