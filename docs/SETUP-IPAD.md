@@ -61,8 +61,13 @@ About 30 minutes, all in Safari. No computer or Terminal needed. You'll set up t
 1. In Supabase: **Authentication → URL Configuration**
    - **Site URL:** your Vercel address, e.g. `https://kouture-life-os.vercel.app`
    - **Redirect URLs** → Add: `https://kouture-life-os.vercel.app/auth/callback`
-2. Open your Vercel address in Safari, enter your owner email, and tap the link in the email.
-3. **After you're in:** Supabase → **Authentication → Sign In / Providers** → turn **off** "Allow new users to sign up". Your account is the only one. The database would refuse a second one anyway; this just closes the door earlier.
+2. **Let the email include a code** (so you can sign in inside the Home Screen app, where
+   email links open in Safari instead): Supabase → **Authentication → Emails** (Email
+   Templates) → **Magic Link**. In the message body, add a line: `Your code: {{ .Token }}`
+   and tap **Save**.
+3. Open your Vercel address, enter your owner email, then type the code from the email
+   (or tap its link).
+4. **After you're in:** Supabase → **Authentication → Sign In / Providers** → turn **off** "Allow new users to sign up". Your account is the only one. The database would refuse a second one anyway; this just closes the door earlier.
 
 ## Part 4 — Make it an app
 
