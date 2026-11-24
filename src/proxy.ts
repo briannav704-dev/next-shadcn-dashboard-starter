@@ -21,19 +21,31 @@ export async function proxy(request: NextRequest) {
   if (!url || !key) return NextResponse.next();
 
   let response = NextResponse.next({ request });
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (toSet) => {
-        for (const { name, value } of toSet) request.cookies.set(name, value);
-        response = NextResponse.next({ request });
-        for (const { name, value, options } of toSet) response.cookies.set(name, value, options);
+  let signedIn = false;
+  try {
+    const supabase = createServerClient(url.trim(), key.trim(), {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (toSet) => {
+          for (const { name, value } of toSet) request.cookies.set(name, value);
+          response = NextResponse.next({ request });
+          for (const { name, value, options } of toSet) response.cookies.set(name, value, options);
+        }
       }
-    }
-  });
-
-  const { data } = await supabase.auth.getUser();
-  if (!data.user && !isPublic(pathname)) {
+    });
+    const { data } = await supabase.auth.getUser();
+    signedIn = Boolean(data.user);
+  } catch (error) {
+    // A malformed Supabase setting must not take the whole site down: /setup
+    // explains which setting to fix.
+    console.error('[proxy] Supabase session check failed', error);
+    if (pathname === '/setup') return NextResponse.next();
+    const setup = request.nextUrl.clone();
+    setup.pathname = '/setup';
+    setup.search = '?check=failed';
+    return NextResponse.redirect(setup);
+  }
+  if (!signedIn && !isPublic(pathname)) {
     const login = request.nextUrl.clone();
     login.pathname = '/login';
     login.search = pathname === '/' ? '' : `?next=${encodeURIComponent(pathname)}`;
