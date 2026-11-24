@@ -69,3 +69,6 @@ export async function requireOwnerAction(): Promise<OwnerSession> {
     throw new AppError('UNAUTHENTICATED', 'Your session has ended. Please sign in again.');
   return session;
 }
+
+/** One instant per request, so every part of a page agrees on "now". */
+export const requestNow = cache((): Date => new Date());

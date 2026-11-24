@@ -6,13 +6,9 @@ import { formatCents } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import type { Appointment } from '@/server/data/types';
 
-const STATUS: Record<Appointment['status'], { label: string; className: string }> = {
-  booked: { label: 'Booked', className: 'bg-muted text-muted-foreground' },
-  confirmed: { label: 'Confirmed', className: 'bg-blush text-secondary-foreground' },
-  completed: { label: 'Completed', className: 'bg-success/12 text-success' },
-  no_show: { label: 'No-show', className: 'bg-destructive/10 text-destructive' },
-  cancelled: { label: 'Cancelled', className: 'bg-muted text-muted-foreground line-through' }
-};
+import { APPOINTMENT_STATUS_STYLE } from './appointment-status';
+
+const STATUS = APPOINTMENT_STATUS_STYLE;
 
 function AppointmentRow({
   appt,

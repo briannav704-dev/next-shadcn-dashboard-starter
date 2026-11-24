@@ -53,20 +53,19 @@ export const NAV: Record<Environment, NavGroup[]> = {
         {
           title: 'Appointments',
           url: '/kouture/appointments',
-          icon: 'calendarEvent',
-          comingInPhase: 4
+          icon: 'calendarEvent'
         },
-        { title: 'Clients', url: '/kouture/clients', icon: 'teams', comingInPhase: 4 },
-        { title: 'Service menu', url: '/kouture/services', icon: 'services', comingInPhase: 4 },
-        { title: 'Inventory', url: '/kouture/inventory', icon: 'inventory', comingInPhase: 4 }
+        { title: 'Clients', url: '/kouture/clients', icon: 'teams' },
+        { title: 'Service menu', url: '/kouture/services', icon: 'services' },
+        { title: 'Inventory', url: '/kouture/inventory', icon: 'inventory' }
       ]
     },
     {
       label: 'Money',
       items: [
-        { title: 'Revenue & expenses', url: '/kouture/money', icon: 'cash', comingInPhase: 4 },
-        { title: 'Profit reports', url: '/kouture/reports', icon: 'receipt', comingInPhase: 4 },
-        { title: 'Analytics', url: '/kouture/analytics', icon: 'analytics', comingInPhase: 4 }
+        { title: 'Revenue & expenses', url: '/kouture/money', icon: 'cash' },
+        { title: 'Profit reports', url: '/kouture/reports', icon: 'receipt' },
+        { title: 'Analytics', url: '/kouture/analytics', icon: 'analytics' }
       ]
     },
     {
@@ -75,17 +74,15 @@ export const NAV: Record<Environment, NavGroup[]> = {
         {
           title: 'Marketing calendar',
           url: '/kouture/marketing',
-          icon: 'marketing',
-          comingInPhase: 4
+          icon: 'marketing'
         },
-        { title: 'Social planner', url: '/kouture/social', icon: 'social', comingInPhase: 4 },
+        { title: 'Social planner', url: '/kouture/social', icon: 'social' },
         {
           title: 'Client retention',
           url: '/kouture/retention',
-          icon: 'retention',
-          comingInPhase: 4
+          icon: 'retention'
         },
-        { title: 'Policies', url: '/kouture/policies', icon: 'policy', comingInPhase: 4 }
+        { title: 'Policies', url: '/kouture/policies', icon: 'policy' }
       ]
     },
     {

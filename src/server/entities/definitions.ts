@@ -60,6 +60,70 @@ export const GOAL_AREAS = ['personal', 'health', 'money', 'beauty', 'growth', 't
 export const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 export const TRIP_ITEM_KINDS = ['flight', 'stay', 'activity', 'dining', 'packing'] as const;
 
+export const APPOINTMENT_STATUSES = [
+  'booked',
+  'confirmed',
+  'completed',
+  'no_show',
+  'cancelled'
+] as const;
+export const SERVICE_CATEGORIES = [
+  'manicure',
+  'extensions',
+  'fill',
+  'pedicure',
+  'nail_art',
+  'removal',
+  'add_on',
+  'other'
+] as const;
+export const EXPENSE_CATEGORIES = [
+  'supplies',
+  'rent',
+  'marketing',
+  'software',
+  'education',
+  'equipment',
+  'fees',
+  'other'
+] as const;
+export const INVENTORY_CATEGORIES = [
+  'gel',
+  'acrylic',
+  'polish',
+  'tools',
+  'nail_art',
+  'disposables',
+  'sanitation',
+  'retail',
+  'other'
+] as const;
+export const MARKETING_CHANNELS = [
+  'instagram',
+  'tiktok',
+  'facebook',
+  'sms',
+  'email',
+  'in_salon',
+  'other'
+] as const;
+export const MARKETING_KINDS = [
+  'post',
+  'reel',
+  'story',
+  'campaign',
+  'promo',
+  'message',
+  'event'
+] as const;
+export const MARKETING_STATUSES = ['idea', 'drafting', 'ready', 'scheduled', 'published'] as const;
+
+const optionalId = z
+  .string()
+  .nullish()
+  .transform((v) => v || null);
+const nullableDateTime = dateTime.nullish().transform((v) => v ?? null);
+
 function entity<TRow extends z.ZodObject, TInput extends z.ZodObject>(def: {
   schema: 'life' | 'kouture';
   table: string;
@@ -480,6 +544,275 @@ export const ENTITIES = {
     label: (r) => r.entryOn,
     paths: ['/life/journal'],
     uniqueBy: ['entryOn']
+  }),
+
+  // ── Kouture Nail Bar ──────────────────────────────────────────────────────
+  'kouture.clients': entity({
+    schema: 'kouture',
+    table: 'clients',
+    row: z.object({
+      id,
+      fullName: z.string(),
+      phone: z.string().nullable(),
+      email: z.string().nullable(),
+      instagram: z.string().nullable(),
+      birthday: z.string().nullable(),
+      allergies: z.string().nullable(),
+      notes: z.string().nullable(),
+      source: z.enum(['manual', 'nailzy', 'import']),
+      smsMarketingConsentAt: z.string().nullable(),
+      emailMarketingConsentAt: z.string().nullable(),
+      smsOptedOutAt: z.string().nullable(),
+      emailOptedOutAt: z.string().nullable(),
+      createdAt: z.string()
+    }),
+    input: z.object({
+      fullName: text(160, 'Name'),
+      phone: optionalText(40),
+      email: z
+        .email('Enter a valid email.')
+        .nullish()
+        .or(z.literal(''))
+        .transform((v) => v || null),
+      instagram: optionalText(60),
+      birthday: optionalDate,
+      allergies: optionalText(500),
+      notes: optionalText(4000),
+      source: z.enum(['manual', 'nailzy', 'import']).default('manual'),
+      smsMarketingConsentAt: nullableDateTime,
+      emailMarketingConsentAt: nullableDateTime,
+      smsOptedOutAt: nullableDateTime,
+      emailOptedOutAt: nullableDateTime
+    }),
+    label: (r) => r.fullName,
+    paths: ['/kouture', '/kouture/clients', '/kouture/retention']
+  }),
+  'kouture.client_notes': entity({
+    schema: 'kouture',
+    table: 'client_notes',
+    row: z.object({ id, clientId: z.string(), body: z.string(), createdAt: z.string() }),
+    input: z.object({ clientId: id, body: text(4000, 'Note') }),
+    // Client notes can be sensitive (allergies, health); never echo them into logs.
+    label: () => 'note',
+    paths: ['/kouture/clients'],
+    refs: { clientId: { entity: 'kouture.clients', onDelete: 'cascade' } }
+  }),
+  'kouture.services': entity({
+    schema: 'kouture',
+    table: 'services',
+    row: z.object({
+      id,
+      name: z.string(),
+      category: z.string(),
+      description: z.string().nullable(),
+      durationMinutes: num,
+      priceCents: num,
+      depositCents: num,
+      active: z.boolean()
+    }),
+    input: z
+      .object({
+        name: text(120, 'Name'),
+        category: z.enum(SERVICE_CATEGORIES).default('manicure'),
+        description: optionalText(1000),
+        durationMinutes: z.number().int().min(5, 'At least 5 minutes.').max(600),
+        priceCents: cents,
+        depositCents: cents.default(0),
+        active: z.boolean().default(true)
+      })
+      .refine((v) => v.depositCents <= v.priceCents, {
+        message: 'Deposit can’t be more than the price.',
+        path: ['depositCents']
+      }),
+    label: (r) => r.name,
+    paths: ['/kouture/services', '/kouture/appointments']
+  }),
+  'kouture.appointments': entity({
+    schema: 'kouture',
+    table: 'appointments',
+    row: z.object({
+      id,
+      clientId: z.string().nullable(),
+      serviceId: z.string().nullable(),
+      clientLabel: z.string().nullable(),
+      serviceLabel: z.string().nullable(),
+      startsAt: z.string(),
+      endsAt: z.string(),
+      status: z.enum(APPOINTMENT_STATUSES),
+      priceCents: num,
+      depositCents: num,
+      source: z.enum(['nailzy', 'manual', 'import']),
+      externalRef: z.string().nullable(),
+      notes: z.string().nullable()
+    }),
+    input: z
+      .object({
+        clientId: optionalId,
+        serviceId: optionalId,
+        clientLabel: optionalText(160),
+        serviceLabel: optionalText(400),
+        startsAt: dateTime,
+        endsAt: dateTime,
+        status: z.enum(APPOINTMENT_STATUSES).default('booked'),
+        priceCents: cents.default(0),
+        depositCents: cents.default(0),
+        source: z.enum(['nailzy', 'manual', 'import']).default('manual'),
+        externalRef: optionalText(300),
+        notes: optionalText(2000)
+      })
+      .refine((v) => Date.parse(v.endsAt) > Date.parse(v.startsAt), {
+        message: 'End must be after the start.',
+        path: ['endsAt']
+      }),
+    label: (r) => r.clientLabel ?? 'Appointment',
+    paths: ['/kouture', '/kouture/appointments', '/kouture/clients', '/kouture/money'],
+    refs: {
+      clientId: { entity: 'kouture.clients', onDelete: 'setNull' },
+      serviceId: { entity: 'kouture.services', onDelete: 'setNull' }
+    }
+  }),
+  'kouture.payments': entity({
+    schema: 'kouture',
+    table: 'payments',
+    row: z.object({
+      id,
+      appointmentId: z.string().nullable(),
+      clientId: z.string().nullable(),
+      kind: z.enum(['deposit', 'balance', 'tip', 'refund']),
+      method: z.enum(['stripe', 'cash', 'other']),
+      amountCents: num,
+      receivedAt: z.string(),
+      notes: z.string().nullable()
+    }),
+    input: z.object({
+      appointmentId: optionalId,
+      clientId: optionalId,
+      kind: z.enum(['deposit', 'balance', 'tip', 'refund']),
+      method: z.enum(['stripe', 'cash', 'other']).default('cash'),
+      amountCents: cents.min(1, 'Enter an amount.'),
+      receivedAt: dateTime,
+      notes: optionalText(500)
+    }),
+    label: (r) => `${r.kind} ${(r.amountCents / 100).toFixed(2)}`,
+    paths: ['/kouture', '/kouture/money', '/kouture/appointments'],
+    refs: {
+      appointmentId: { entity: 'kouture.appointments', onDelete: 'setNull' },
+      clientId: { entity: 'kouture.clients', onDelete: 'setNull' }
+    }
+  }),
+  'kouture.expenses': entity({
+    schema: 'kouture',
+    table: 'expenses',
+    row: z.object({
+      id,
+      category: z.enum(EXPENSE_CATEGORIES),
+      vendor: z.string().nullable(),
+      description: z.string().nullable(),
+      amountCents: num,
+      spentOn: z.string()
+    }),
+    input: z.object({
+      category: z.enum(EXPENSE_CATEGORIES),
+      vendor: optionalText(120),
+      description: optionalText(300),
+      amountCents: cents.min(1, 'Enter an amount.'),
+      spentOn: dateKey
+    }),
+    label: (r) => r.vendor ?? r.description ?? r.category,
+    paths: ['/kouture', '/kouture/money']
+  }),
+  'kouture.inventory_items': entity({
+    schema: 'kouture',
+    table: 'inventory_items',
+    row: z.object({
+      id,
+      name: z.string(),
+      category: z.enum(INVENTORY_CATEGORIES),
+      unit: z.string(),
+      onHand: num,
+      reorderAt: num,
+      unitCostCents: nullableNum,
+      supplier: z.string().nullable(),
+      notes: z.string().nullable(),
+      archived: z.boolean()
+    }),
+    input: z.object({
+      name: text(120, 'Name'),
+      category: z.enum(INVENTORY_CATEGORIES).default('other'),
+      unit: text(20, 'Unit').default('unit'),
+      onHand: z.number().min(0, 'Stock can’t be negative.').max(100_000),
+      reorderAt: z.number().min(0).max(100_000).default(0),
+      unitCostCents: optionalCents,
+      supplier: optionalText(120),
+      notes: optionalText(1000),
+      archived: z.boolean().default(false)
+    }),
+    label: (r) => r.name,
+    paths: ['/kouture/inventory']
+  }),
+  'kouture.marketing_items': entity({
+    schema: 'kouture',
+    table: 'marketing_items',
+    row: z.object({
+      id,
+      title: z.string(),
+      channel: z.enum(MARKETING_CHANNELS),
+      kind: z.enum(MARKETING_KINDS),
+      scheduledOn: z.string().nullable(),
+      status: z.enum(MARKETING_STATUSES),
+      caption: z.string().nullable(),
+      notes: z.string().nullable()
+    }),
+    input: z.object({
+      title: text(160, 'Title'),
+      channel: z.enum(MARKETING_CHANNELS),
+      kind: z.enum(MARKETING_KINDS),
+      scheduledOn: optionalDate,
+      status: z.enum(MARKETING_STATUSES).default('idea'),
+      caption: optionalText(2200),
+      notes: optionalText(2000)
+    }),
+    label: (r) => r.title,
+    paths: ['/kouture/marketing', '/kouture/social']
+  }),
+  'kouture.policies': entity({
+    schema: 'kouture',
+    table: 'policies',
+    row: z.object({ id, title: z.string(), body: z.string(), sortOrder: num }),
+    input: z.object({
+      title: text(120, 'Title'),
+      body: text(5000, 'Policy'),
+      sortOrder: z.number().int().min(0).max(1000).default(0)
+    }),
+    label: (r) => r.title,
+    paths: ['/kouture/policies']
+  }),
+  'kouture.sync_runs': entity({
+    schema: 'kouture',
+    table: 'sync_runs',
+    row: z.object({
+      id,
+      source: z.enum(['nailzy_calendar']),
+      ranAt: z.string(),
+      ok: z.boolean(),
+      added: num,
+      updated: num,
+      cancelled: num,
+      skipped: num,
+      message: z.string().nullable()
+    }),
+    input: z.object({
+      source: z.enum(['nailzy_calendar']),
+      ranAt: dateTime,
+      ok: z.boolean(),
+      added: z.number().int().min(0).default(0),
+      updated: z.number().int().min(0).default(0),
+      cancelled: z.number().int().min(0).default(0),
+      skipped: z.number().int().min(0).default(0),
+      message: optionalText(500)
+    }),
+    label: (r) => (r.ok ? 'Nailzy calendar synced' : 'Nailzy calendar sync failed'),
+    paths: ['/kouture/appointments', '/kouture']
   })
 };
 

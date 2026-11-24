@@ -65,3 +65,42 @@ do $$ begin
 end $$;
 select 'ok: module constraints enforced';
 reset role;
+
+-- Kouture modules: sync history is append-only, note text stays out of the log,
+-- and agents can read but not change stock.
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', false);
+insert into kouture.sync_runs (source, ok, added) values ('nailzy_calendar', true, 3);
+insert into kouture.client_notes (client_id, body)
+  select id, 'Confidential: allergic to HEMA' from kouture.clients limit 1;
+insert into kouture.inventory_items (name, on_hand, reorder_at) values ('Builder gel', 4, 2);
+do $$ begin
+  begin
+    update kouture.sync_runs set added = 99;
+    raise exception 'FAIL: sync history was rewritten';
+  exception when insufficient_privilege then null;
+  end;
+  if exists (select 1 from core.audit_log where summary ilike '%HEMA%') then
+    raise exception 'FAIL: client note text leaked into the audit log';
+  end if;
+  begin
+    insert into kouture.inventory_items (name, on_hand) values ('Bad', -1);
+    raise exception 'FAIL: negative stock accepted';
+  exception when check_violation then null;
+  end;
+end $$;
+reset role;
+set role kouture_agent;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"kouture_agent","agent_key":"inventory_manager"}', false);
+do $$ begin
+  if (select count(*) from kouture.inventory_items) <> 1 then
+    raise exception 'FAIL: kouture_agent cannot read inventory';
+  end if;
+  begin
+    update kouture.inventory_items set on_hand = 0;
+    raise exception 'FAIL: kouture_agent changed stock';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+select 'ok: kouture modules: sync log append-only, notes private, agents read-only on stock';
+reset role;
