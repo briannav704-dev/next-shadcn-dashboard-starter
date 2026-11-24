@@ -1,33 +1,235 @@
-/* Import individual theme files */
-@import './themes/claude.css';
-@import './themes/discord.css';
-@import './themes/supabase.css';
-@import './themes/vercel.css';
-@import './themes/mono.css';
-@import './themes/notebook.css';
-@import './themes/light-green.css';
-@import './themes/zen.css';
-@import './themes/astro-vista.css';
-@import './themes/whatsapp.css';
-
-body {
-  @apply overscroll-none;
-}
+/*
+  Kouture design tokens.
+  Palette: warm ivory canvas, dusty rose primary, blush surfaces, champagne gold
+  accents, soft taupe for quiet text. Text pairs are checked to WCAG AA (≥4.5:1):
+  rose on white 5.3, taupe on ivory 5.1, gold-ink on card 4.9, espresso on ivory 12.1.
+*/
 
 :root {
-  --header-height: calc(var(--spacing, 0.25rem) * 12 + 1px);
+  --ivory: oklch(0.978 0.008 73.7);
+  --blush: oklch(0.925 0.022 24.4);
+  --rose: oklch(0.54 0.097 8.6);
+  --champagne: oklch(0.75 0.085 82.1);
+  --gold-ink: oklch(0.546 0.076 75.6);
+  --taupe: oklch(0.526 0.023 49.9);
+
+  --background: var(--ivory);
+  --foreground: oklch(0.318 0.018 29.1);
+  --card: oklch(0.995 0.005 78.3);
+  --card-foreground: oklch(0.318 0.018 29.1);
+  --popover: oklch(0.995 0.005 78.3);
+  --popover-foreground: oklch(0.318 0.018 29.1);
+  --primary: var(--rose);
+  --primary-foreground: oklch(0.995 0.005 78.3);
+  --secondary: var(--blush);
+  --secondary-foreground: oklch(0.36 0.04 15);
+  --muted: oklch(0.956 0.013 63.9);
+  --muted-foreground: var(--taupe);
+  --accent: oklch(0.94 0.018 30);
+  --accent-foreground: oklch(0.318 0.018 29.1);
+  --destructive: oklch(0.55 0.15 25);
+  --destructive-foreground: oklch(0.995 0.005 78.3);
+  --success: oklch(0.56 0.07 150);
+  --border: oklch(0.91 0.017 61.9);
+  --input: oklch(0.88 0.02 55);
+  --ring: var(--champagne);
+
+  /* Chart series: rose, antique gold, plum. Richer than the UI tones on purpose:
+     validated (dataviz validate_palette.js) for chroma, CVD separation and
+     3:1 contrast against the card surface in each mode. */
+  --chart-1: #a8486a;
+  --chart-2: #b8862e;
+  --chart-3: #6e4b8c;
+  --chart-4: oklch(0.788 0.066 7.8);
+  --chart-5: oklch(0.42 0.06 350);
+
+  --sidebar: oklch(0.962 0.012 55);
+  --sidebar-foreground: oklch(0.318 0.018 29.1);
+  --sidebar-primary: var(--rose);
+  --sidebar-primary-foreground: oklch(0.995 0.005 78.3);
+  --sidebar-accent: oklch(0.93 0.024 24);
+  --sidebar-accent-foreground: oklch(0.3 0.03 15);
+  --sidebar-border: oklch(0.91 0.017 61.9);
+  --sidebar-ring: var(--champagne);
+
+  --radius: 0.875rem;
+  --shadow-color: 30 20% 30%;
+  --shadow-2xs: 0 1px 2px hsl(var(--shadow-color) / 0.04);
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.05);
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.05), 0 2px 8px hsl(var(--shadow-color) / 0.04);
+  --shadow: 0 1px 3px hsl(var(--shadow-color) / 0.06), 0 6px 20px hsl(var(--shadow-color) / 0.05);
+  --shadow-md:
+    0 2px 4px hsl(var(--shadow-color) / 0.05), 0 10px 28px hsl(var(--shadow-color) / 0.07);
+  --shadow-lg:
+    0 4px 8px hsl(var(--shadow-color) / 0.05), 0 18px 40px hsl(var(--shadow-color) / 0.09);
+  --shadow-xl:
+    0 8px 16px hsl(var(--shadow-color) / 0.06), 0 28px 60px hsl(var(--shadow-color) / 0.11);
+  --shadow-2xl: 0 30px 80px hsl(var(--shadow-color) / 0.18);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  --header-height: calc(var(--spacing) * 14 + 1px);
 }
 
-/* Apply theme fonts to body for all themes */
-/* This ensures theme-specific fonts override Next.js font variables */
-/* Font variables are defined on [data-theme] (html element) */
-/* We need to override Next.js font variables on body to use html's values */
-/* Using initial removes the property, allowing parent (html) values to cascade */
-[data-theme] body {
-  /* Remove Next.js font variables to allow theme variables from html to cascade */
-  --font-sans: initial;
-  --font-mono: initial;
-  --font-serif: initial;
-  /* Apply font-family - will now resolve from html's [data-theme] variables */
-  font-family: var(--font-sans);
+.dark {
+  --ivory: oklch(0.21 0.012 359.1);
+  --blush: oklch(0.3 0.03 5);
+  --rose: oklch(0.788 0.066 7.8);
+  --champagne: oklch(0.789 0.081 82.6);
+  --gold-ink: oklch(0.789 0.081 82.6);
+  --taupe: oklch(0.687 0.024 45.5);
+
+  --foreground: oklch(0.94 0.013 48.6);
+  --card: oklch(0.247 0.015 356.3);
+  --card-foreground: oklch(0.94 0.013 48.6);
+  --popover: oklch(0.282 0.016 352.2);
+  --popover-foreground: oklch(0.94 0.013 48.6);
+  --primary-foreground: oklch(0.251 0.019 2);
+  --secondary-foreground: oklch(0.94 0.013 48.6);
+  --muted: oklch(0.282 0.016 352.2);
+  --accent: oklch(0.31 0.022 0);
+  --accent-foreground: oklch(0.94 0.013 48.6);
+  --destructive: oklch(0.68 0.14 22);
+  --destructive-foreground: oklch(0.21 0.012 359.1);
+  --success: oklch(0.74 0.08 150);
+  --border: oklch(0.332 0.018 356.1);
+  --input: oklch(0.38 0.02 356);
+  --chart-1: #d06690;
+  --chart-2: #b08530;
+  --chart-3: #9873d0;
+  --chart-4: oklch(0.6 0.08 8);
+  --chart-5: oklch(0.86 0.04 60);
+
+  --sidebar: oklch(0.19 0.012 359);
+  --sidebar-foreground: oklch(0.94 0.013 48.6);
+  --sidebar-primary-foreground: oklch(0.251 0.019 2);
+  --sidebar-accent: oklch(0.29 0.025 0);
+  --sidebar-accent-foreground: oklch(0.96 0.01 48);
+  --sidebar-border: oklch(0.3 0.016 356);
+
+  --shadow-color: 340 30% 3%;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-ivory: var(--ivory);
+  --color-blush: var(--blush);
+  --color-rose: var(--rose);
+  --color-champagne: var(--champagne);
+  --color-gold-ink: var(--gold-ink);
+  --color-taupe: var(--taupe);
+
+  --font-sans: var(--font-jost), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), ui-serif, Georgia, serif;
+  --font-display: var(--font-cormorant), ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+}
+
+@layer base {
+  body {
+    @apply overscroll-none;
+    font-feature-settings: 'ss01', 'kern';
+  }
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.005em;
+    /* Cormorant defaults to old-style figures; money and times need lining, aligned digits */
+    font-feature-settings:
+      'lnum' 1,
+      'tnum' 1;
+  }
+}
+
+/* Hairline champagne rule used under section titles and on hero cards */
+@utility gold-rule {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--champagne) 70%, transparent),
+    transparent
+  );
+  height: 1px;
+}
+
+/* Soft blush-to-ivory wash for hero surfaces */
+@utility hero-wash {
+  background-image:
+    radial-gradient(
+      120% 90% at 100% 0%,
+      color-mix(in oklch, var(--blush) 85%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      80% 70% at 0% 100%,
+      color-mix(in oklch, var(--champagne) 18%, transparent) 0%,
+      transparent 65%
+    );
+}
+
+@utility lux-card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms ease,
+    border-color 200ms ease;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lux-card-interactive:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+    border-color: color-mix(in oklch, var(--champagne) 45%, var(--border));
+  }
 }

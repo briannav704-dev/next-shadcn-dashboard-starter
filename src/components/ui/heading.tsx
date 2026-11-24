@@ -1,24 +1,23 @@
-import { InfoButton } from '@/components/ui/info-button';
-import type { InfobarContent } from '@/components/ui/infobar';
-
 interface HeadingProps {
   title: string;
-  description: string;
-  infoContent?: InfobarContent;
+  description?: string;
+  eyebrow?: string;
 }
 
-export function Heading({ title, description, infoContent }: HeadingProps) {
+export function Heading({ title, description, eyebrow }: HeadingProps) {
   return (
     <div className='min-w-0'>
-      <div className='flex items-center gap-2'>
-        <h1 className='text-2xl font-semibold tracking-tight text-balance'>{title}</h1>
-        {infoContent && (
-          <div className='pt-1'>
-            <InfoButton content={infoContent} />
-          </div>
-        )}
-      </div>
-      <p className='text-muted-foreground mt-1 text-sm text-pretty'>{description}</p>
+      {eyebrow && (
+        <p className='text-gold-ink mb-1 text-xs font-medium tracking-[0.2em] uppercase'>
+          {eyebrow}
+        </p>
+      )}
+      <h1 className='font-display text-3xl font-medium tracking-tight text-balance md:text-4xl'>
+        {title}
+      </h1>
+      {description && (
+        <p className='text-muted-foreground mt-1.5 text-sm text-pretty'>{description}</p>
+      )}
     </div>
   );
 }

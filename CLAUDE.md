@@ -1,22 +1,19 @@
 # CLAUDE.md
 
-This is a Next.js 16 + shadcn/ui admin dashboard starter kit.
+Kouture Life OS: a single-owner personal + business OS (Next.js 16, Supabase, shadcn/ui on Base UI, Tailwind v4). Read [AGENTS.md](./AGENTS.md) and [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) first.
 
-## Key References
+## Non-negotiables
 
-- **[AGENTS.md](./AGENTS.md)** — Full project overview, tech stack, structure, conventions, data fetching patterns, deployment
-- **[docs/forms.md](./docs/forms.md)** — Form system: TanStack Form + Zod, composable fields, validation, multi-step, sheet/dialog forms
-- **[docs/themes.md](./docs/themes.md)** — Theme system: OKLCH colors, adding themes, font config
-- **[docs/nav-rbac.md](./docs/nav-rbac.md)** — Navigation RBAC: access control, Clerk integration
-- **[docs/clerk_setup.md](./docs/clerk_setup.md)** — Clerk auth setup: organizations, billing, environment variables
-- **[docs/deployment.md](./docs/deployment.md)** — Deployment: Vercel, production environment variables, Docker
+- **Auth is Supabase**, not Clerk. Any older starter docs or skills that mention Clerk are out of date.
+- Pages call `requireOwnerPage()` and server actions call `requireOwnerAction()` (`src/server/session.ts`). Actions validate input with Zod through `runAction()`.
+- Data access goes through repositories (`src/server/data`). Keep the Supabase and sample-data implementations in sync, including their rules.
+- **Never** use the Supabase `service_role` key in app code. Every new table needs `owner_id`, RLS, grants that keep `life` and `kouture` apart, and the `core.audit_row_change()` trigger. Add a case to `supabase/tests/10_security.test.sql`.
+- Agents never perform outward or irreversible actions directly. They create a `core.approvals` row.
+- "Today" comes from `todayKey(profile.timezone)` (`src/lib/dates.ts`), never from UTC.
+- Money is integer cents; format with `formatCents`.
+- Icons only via `@/components/icons`. Colours via theme tokens (`text-rose`, `bg-blush`, `text-gold-ink`, …). Charts use `--chart-1..3`, which are validated for colour-blind safety.
+- Formatting: single quotes, JSX single quotes, no trailing commas, 2 spaces.
 
-## Critical Conventions
+## Checks before committing
 
-- **React Query** for all data fetching — `void queryClient.query(...).catch(noop)` on server (`prefetchQuery` is deprecated) + `useSuspenseQuery` on client (standard TanStack pattern), `useMutation` for forms, `HydrationBoundary` + `dehydrate` for hydration, `<Suspense fallback>` for streaming
-- **API layer** per feature — `api/types.ts` → `api/service.ts` → `api/queries.ts`; `queries.ts` exports `entityQueries` (keys + `queryOptions`) and `entityMutations` (`mutationFn` only); components invalidate in `onSettled`; components import from service and queries, never from mock APIs directly
-- **nuqs** for URL search params — `searchParamsCache` on server, `useQueryStates` on client, use `getSortingStateParser` for sort (same parser as `useDataTable`)
-- **Icons** — only import from `@/components/icons`, never from `@tabler/icons-react` directly
-- **Forms** — `useAppForm` from `@/lib/form` (TanStack `createFormHook`) + `form.AppField` rendering the field components in `@/components/forms/fields` (`field.TextField`, `field.SelectField`, …); each component is the shadcn TanStack Form doc anatomy; raw `form.Field` for one-off custom fields; form-level Zod `onSubmit` validators
-- **Page headers** — use `PageContainer` props (`pageTitle`, `pageDescription`, `pageHeaderAction`), never import `<Heading>` manually
-- **Formatting** — single quotes, JSX single quotes, no trailing comma, 2-space indent
+`bun run typecheck && bun run lint && bun run test && bun run test:db`
