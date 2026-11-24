@@ -14,8 +14,8 @@ Built with Next.js 16, Supabase (Postgres, Auth, Row Level Security), shadcn/ui 
 | 1 | Repository review and architecture | Done, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | 2 | Design system, auth, data layer, dashboards, approvals, audit log | Done |
 | 3 | My Life modules: planner, calendar, tasks, habits, budget, savings, fitness, workouts, meals, travel, self-care, goals, journal | Done |
-| 4 | Kouture business modules | Next |
-| 5 | AI management team | |
+| 4 | Kouture business modules: appointments with Nailzy calendar sync, clients and notes, services, revenue and expenses, profit reports, analytics, taxes, inventory, marketing calendar, social planner, retention, policies | Done |
+| 5 | AI management team | Next |
 | 6 | Integrations and approval executor | |
 | 7 | Security testing, backups, deployment | |
 

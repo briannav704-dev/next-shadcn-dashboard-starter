@@ -7,7 +7,12 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20).optional(),
   OWNER_EMAIL: z.email().optional(),
   KOUTURE_DEMO_MODE: z.enum(['true', 'false']).optional(),
-  NAILZY_BOOKING_URL: z.url().optional()
+  NAILZY_BOOKING_URL: z.url().optional(),
+  /** Secret iCal address of the calendar Nailzy syncs bookings into. Never commit it. */
+  NAILZY_CALENDAR_URL: z
+    .string()
+    .regex(/^(https|webcal):\/\/\S+$/i, 'NAILZY_CALENDAR_URL must be an https or webcal link')
+    .optional()
 });
 
 export type AppMode = 'supabase' | 'demo' | 'unconfigured';
@@ -22,7 +27,8 @@ export function readEnv() {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: blankToUndefined(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     OWNER_EMAIL: blankToUndefined(process.env.OWNER_EMAIL)?.toLowerCase(),
     KOUTURE_DEMO_MODE: blankToUndefined(process.env.KOUTURE_DEMO_MODE),
-    NAILZY_BOOKING_URL: blankToUndefined(process.env.NAILZY_BOOKING_URL)
+    NAILZY_BOOKING_URL: blankToUndefined(process.env.NAILZY_BOOKING_URL),
+    NAILZY_CALENDAR_URL: blankToUndefined(process.env.NAILZY_CALENDAR_URL)
   });
 }
 

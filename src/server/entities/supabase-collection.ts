@@ -17,6 +17,8 @@ import { ENTITIES, type EntityKey, type RowOf } from './definitions';
 
 type PgError = { message: string; code?: string };
 
+const PAGE_SIZE = 1000;
+
 function fail(error: PgError, what: string): never {
   if (error.code === '42501') throw new AppError('FORBIDDEN', `Not allowed to ${what}.`);
   if (error.code === 'PGRST116') throw new AppError('NOT_FOUND', 'That item no longer exists.');
@@ -49,10 +51,22 @@ export function createSupabaseEntities(db: SupabaseServerClient): EntityAccess {
         }
         for (const o of query.order ?? [])
           q = q.order(toSnake(o.field), { ascending: o.ascending ?? true });
-        if (query.limit) q = q.limit(query.limit);
-        const { data, error } = await q;
-        if (error) fail(error, `load ${def.table.replace(/_/g, ' ')}`);
-        return (data ?? []).map(parseRow);
+        // Stable order so pages never skip or repeat rows.
+        q = q.order('id');
+        if (query.limit) {
+          const { data, error } = await q.limit(query.limit);
+          if (error) fail(error, `load ${def.table.replace(/_/g, ' ')}`);
+          return (data ?? []).map(parseRow);
+        }
+        // Supabase caps each response (1,000 rows by default); page through the rest.
+        const rows: unknown[] = [];
+        for (let from = 0; ; from += PAGE_SIZE) {
+          const { data, error } = await q.range(from, from + PAGE_SIZE - 1);
+          if (error) fail(error, `load ${def.table.replace(/_/g, ' ')}`);
+          rows.push(...(data ?? []));
+          if (!data || data.length < PAGE_SIZE) break;
+        }
+        return rows.map(parseRow);
       },
       async get(id) {
         const { data, error } = await table().select('*').eq('id', id).single();

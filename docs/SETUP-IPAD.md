@@ -50,8 +50,11 @@ About 30 minutes, all in Safari. No computer or Terminal needed. You'll set up t
    | `OWNER_EMAIL` | the email you'll sign in with |
    | `NEXT_PUBLIC_SENTRY_DISABLED` | `true` |
 
+   Optional, any time later: `NAILZY_CALENDAR_URL` (your Nailzy bookings). The app's
+   **Appointments → Show me how** page walks you through finding it.
+
 4. Tap **Deploy**. When it finishes you'll get an address like `kouture-life-os.vercel.app`.
-5. **Settings → Git → Production Branch:** set it to the Kouture branch (`claude/…`) unless the work has been merged into `main`. Then redeploy.
+5. Vercel deploys `main` automatically; every merged update redeploys on its own.
 
 ## Part 3 — Connect sign-in
 
@@ -66,6 +69,12 @@ About 30 minutes, all in Safari. No computer or Terminal needed. You'll set up t
 In Safari on your iPad and iPhone, open your Vercel address and tap **Share** → **Add to Home Screen**. It opens full-screen with the Kouture icon.
 
 ---
+
+### Updating the database later
+
+`supabase/setup.sql` is for a brand-new project. If you already ran it and a later
+update adds a file in `supabase/migrations/`, paste only the new file(s) into the SQL
+Editor, oldest first, and run them once.
 
 ### If something goes wrong
 

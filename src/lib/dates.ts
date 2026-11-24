@@ -60,6 +60,20 @@ export function startOfDayInZone(key: string, timeZone: string): Date {
   return new Date(guess.getTime() - zoneOffsetMs(first, timeZone));
 }
 
+/** The UTC instant of a wall-clock time (`key` at h:m:s) in `timeZone`. */
+export function zonedTimeToUtc(
+  key: string,
+  hour: number,
+  minute: number,
+  second: number,
+  timeZone: string
+): Date {
+  const [y, m, d] = key.split('-').map(Number);
+  const guess = new Date(Date.UTC(y, m - 1, d, hour, minute, second));
+  const first = new Date(guess.getTime() - zoneOffsetMs(guess, timeZone));
+  return new Date(guess.getTime() - zoneOffsetMs(first, timeZone));
+}
+
 export function addDays(key: string, days: number): string {
   const [y, m, d] = key.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d + days));

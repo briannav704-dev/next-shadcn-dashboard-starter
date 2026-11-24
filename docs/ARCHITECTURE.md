@@ -56,7 +56,7 @@ Run `bun run test:db` to apply the migrations to a throwaway Postgres and attack
 1. ✅ Inspect references, propose architecture
 2. ✅ Design system, auth, data layer, dashboards, approvals inbox, audit log
 3. ✅ My Life modules: planner, calendar, tasks, habits, budget, savings, fitness, workouts, meals, travel, self-care, goals, journal
-4. Kouture modules: client CRM and notes, appointments (Nailzy import), services, revenue/expenses/profit, inventory, marketing and social calendars, retention, analytics, policies
+4. ✅ Kouture modules: client CRM and notes, appointments (Nailzy bookings read from the Google Calendar iCal feed Nailzy syncs to), services, revenue/expenses/profit, inventory, marketing and social calendars, retention, analytics, policies
 5. AI management team: seven Kouture agents plus a personal assistant, each with a role, a scoped toolset, its own chat, task history and collaboration via the CEO
 6. Integrations and executor: Stripe (deposits, refunds), Twilio SMS (10DLC, consent and STOP), Resend email (CAN-SPAM), Instagram, Nailzy. The executor runs only approved, unexpired requests, once
 7. Security testing (RLS, prompt-injection, dependency audit), backups and restore drill, deployment

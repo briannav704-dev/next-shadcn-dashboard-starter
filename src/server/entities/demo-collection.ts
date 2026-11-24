@@ -144,7 +144,11 @@ export function createDemoEntities(backend: DemoBackend): EntityAccess {
         const clean = validateInput(key, input) as Record<string, unknown>;
         checkRefs(key, clean);
         checkUnique(key, clean);
-        const row: DemoRow = { ...clean, id: backend.nextId(def.table.slice(0, 3)) };
+        const row: DemoRow = {
+          createdAt: new Date().toISOString(),
+          ...clean,
+          id: backend.nextId(def.table.slice(0, 3))
+        };
         rowsOf(key).push(row);
         audit(key, 'insert', row);
         return copy(row);

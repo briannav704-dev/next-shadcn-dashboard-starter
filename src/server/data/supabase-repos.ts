@@ -4,9 +4,10 @@ import { AppError } from '@/server/errors';
 import { createSupabaseEntities } from '@/server/entities/supabase-collection';
 import type { SupabaseServerClient } from '@/server/supabase';
 
+import { createKoutureRepository } from './kouture-repository';
 import { createLifeRepository } from './life-repository';
 
-import type { Appointment, Approval, AuditEntry, Expense, Payment, Repositories } from './types';
+import type { Approval, AuditEntry, Repositories } from './types';
 
 type PgError = { message: string; code?: string } | null;
 
@@ -60,128 +61,13 @@ export function createSupabaseRepositories(
   ownerEmail: string
 ): Repositories {
   const entities = createSupabaseEntities(db);
-  const kouture = db.schema('kouture');
   const core = db.schema('core');
 
   return {
     life: createLifeRepository(entities),
     entities,
 
-    kouture: {
-      async listAppointments(range) {
-        const rows = check(
-          await kouture
-            .from('appointments')
-            .select(
-              'id, client_id, starts_at, ends_at, status, price_cents, deposit_cents, source, clients(full_name), services(name)'
-            )
-            .gte('starts_at', range.from)
-            .lt('starts_at', range.to)
-            .order('starts_at'),
-          'load appointments'
-        ) as unknown as {
-          id: string;
-          client_id: string | null;
-          starts_at: string;
-          ends_at: string;
-          status: Appointment['status'];
-          price_cents: number;
-          deposit_cents: number;
-          source: Appointment['source'];
-          clients: { full_name: string } | null;
-          services: { name: string } | null;
-        }[];
-        return rows.map((r) => ({
-          id: r.id,
-          clientId: r.client_id,
-          clientName: r.clients?.full_name ?? 'Walk-in',
-          serviceName: r.services?.name ?? 'Service',
-          startsAt: r.starts_at,
-          endsAt: r.ends_at,
-          status: r.status,
-          priceCents: r.price_cents,
-          depositCents: r.deposit_cents,
-          source: r.source
-        }));
-      },
-      async listPayments(range) {
-        const rows = check(
-          await kouture
-            .from('payments')
-            .select('id, appointment_id, kind, method, amount_cents, received_at')
-            .gte('received_at', range.from)
-            .lt('received_at', range.to),
-          'load payments'
-        ) as {
-          id: string;
-          appointment_id: string | null;
-          kind: Payment['kind'];
-          method: Payment['method'];
-          amount_cents: number;
-          received_at: string;
-        }[];
-        return rows.map((r) => ({
-          id: r.id,
-          appointmentId: r.appointment_id,
-          kind: r.kind,
-          method: r.method,
-          amountCents: r.amount_cents,
-          receivedAt: r.received_at
-        }));
-      },
-      async listExpenses({ fromDay, toDay }) {
-        const rows = check(
-          await kouture
-            .from('expenses')
-            .select('id, category, vendor, amount_cents, spent_on')
-            .gte('spent_on', fromDay)
-            .lte('spent_on', toDay),
-          'load expenses'
-        ) as {
-          id: string;
-          category: Expense['category'];
-          vendor: string | null;
-          amount_cents: number;
-          spent_on: string;
-        }[];
-        return rows.map((r) => ({
-          id: r.id,
-          category: r.category,
-          vendor: r.vendor,
-          amountCents: r.amount_cents,
-          spentOn: r.spent_on
-        }));
-      },
-      async clientStats(monthStart, lapsedBefore) {
-        const total = await kouture.from('clients').select('id', { count: 'exact', head: true });
-        const fresh = await kouture
-          .from('clients')
-          .select('id', { count: 'exact', head: true })
-          .gte('created_at', monthStart);
-        if (total.error || fresh.error) {
-          throw new AppError('UPSTREAM', 'Failed to load client counts', {
-            cause: total.error ?? fresh.error
-          });
-        }
-        // Lapsed = no completed visit since `lapsedBefore` and nothing booked ahead.
-        const recent = check(
-          await kouture
-            .from('appointments')
-            .select('client_id')
-            .or(
-              `and(status.eq.completed,starts_at.gte.${lapsedBefore}),starts_at.gte.${new Date().toISOString()}`
-            )
-            .not('client_id', 'is', null),
-          'load recent visits'
-        ) as { client_id: string }[];
-        const active = new Set(recent.map((r) => r.client_id)).size;
-        return {
-          total: total.count ?? 0,
-          newThisMonth: fresh.count ?? 0,
-          lapsed: Math.max(0, (total.count ?? 0) - active)
-        };
-      }
-    },
+    kouture: createKoutureRepository(entities),
 
     core: {
       async getProfile() {

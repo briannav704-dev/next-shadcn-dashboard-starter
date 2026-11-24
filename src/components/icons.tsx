@@ -114,6 +114,7 @@ import {
   IconHistory,
   IconHome,
   IconDiamond,
+  IconDownload,
   IconMenu2,
   IconReceipt,
   IconSwitchHorizontal,
@@ -285,5 +286,6 @@ export const Icons = {
   switch: IconSwitchHorizontal,
   planner: IconCalendarWeek,
   heart: IconHeart,
-  mail: IconMail
+  mail: IconMail,
+  download: IconDownload
 };
