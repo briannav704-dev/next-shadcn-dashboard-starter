@@ -1,3 +1,4 @@
+import { AGENTS, isAgentKey } from '@/features/team/agents';
 import type { ActorType, ApprovalActionType } from '@/server/data/types';
 
 export const ACTION_LABEL: Record<ApprovalActionType, string> = {
@@ -10,20 +11,10 @@ export const ACTION_LABEL: Record<ApprovalActionType, string> = {
   irreversible: 'Irreversible action'
 };
 
-// Agent keys match the roles defined for Phase 5.
-const AGENT_LABEL: Record<string, string> = {
-  ceo: 'CEO · Executive Assistant',
-  marketing_director: 'Marketing Director',
-  finance_manager: 'Finance Manager',
-  operations_manager: 'Operations Manager',
-  client_relations: 'Client Relations Manager',
-  inventory_manager: 'Inventory Manager',
-  business_analyst: 'Business Analyst',
-  life_assistant: 'Personal Assistant'
-};
-
 export function agentLabel(key: string): string {
-  return AGENT_LABEL[key] ?? key.replace(/_/g, ' ');
+  if (isAgentKey(key)) return `${AGENTS[key].name}, ${AGENTS[key].title}`;
+  if (key === 'life_assistant') return 'Personal Assistant';
+  return key.replace(/_/g, ' ');
 }
 
 export function actorLabel(type: ActorType, id: string): string {

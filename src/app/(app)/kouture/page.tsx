@@ -12,16 +12,21 @@ import { formatDayLong } from '@/lib/dates';
 import { formatCents, percentChange } from '@/lib/money';
 import { BUSINESS } from '@/config/business';
 import { readEnv } from '@/server/env';
+import { BriefingCard } from '@/features/team/components/briefing-card';
 import { requireOwnerPage } from '@/server/session';
 
 export const metadata: Metadata = { title: 'Kouture Nail Bar' };
 
 export default async function KoutureDashboardPage() {
   const session = await requireOwnerPage();
-  const [data, pending] = await Promise.all([
+  const [data, pending, briefings, openTasks] = await Promise.all([
     loadKoutureDashboard(session),
-    session.repos.core.listApprovals({ status: 'pending', limit: 5 })
+    session.repos.core.listApprovals({ status: 'pending', limit: 5 }),
+    // The dashboard must keep working even before the AI team update is applied.
+    session.repos.team.listMessages({ agentKey: 'ceo', limit: 10 }).catch(() => []),
+    session.repos.team.listTasks({ status: 'open' }).catch(() => [])
   ]);
+  const briefing = briefings.find((m) => m.kind === 'briefing') ?? null;
   const kouturePending = pending.filter((a) => a.domain === 'kouture');
 
   return (
@@ -71,6 +76,7 @@ export default async function KoutureDashboardPage() {
           />
         </div>
         <div className='flex flex-col gap-5 lg:col-span-5'>
+          <BriefingCard briefing={briefing} openCount={openTasks.length} />
           <ApprovalsPreview approvals={kouturePending} />
           <ClientsCard stats={data.clients} />
         </div>

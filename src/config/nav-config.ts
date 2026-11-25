@@ -88,7 +88,7 @@ export const NAV: Record<Environment, NavGroup[]> = {
     },
     {
       label: 'AI management team',
-      items: [{ title: 'The team', url: '/kouture/team', icon: 'agent', comingInPhase: 5 }]
+      items: [{ title: 'The team', url: '/kouture/team', icon: 'agent' }]
     }
   ]
 };

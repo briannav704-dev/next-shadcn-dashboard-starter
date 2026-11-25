@@ -157,6 +157,64 @@ export type AuditEntry = {
 
 export type DateRange = { from: string; to: string };
 
+// ── AI team ────────────────────────────────────────────────────────────────
+export const AGENT_KEYS = [
+  'ceo',
+  'operations_manager',
+  'client_relations',
+  'marketing_director',
+  'finance_manager',
+  'inventory_manager',
+  'business_analyst'
+] as const;
+export type AgentKey = (typeof AGENT_KEYS)[number];
+export type AgentTaskStatus = 'open' | 'done' | 'dismissed';
+export type AgentSeverity = 'info' | 'attention' | 'urgent';
+
+export type AgentTask = {
+  id: string;
+  agentKey: AgentKey;
+  sourceKey: string;
+  title: string;
+  detail: string | null;
+  severity: AgentSeverity;
+  href: string | null;
+  status: AgentTaskStatus;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+};
+
+export type AgentMessage = {
+  id: string;
+  agentKey: AgentKey;
+  author: 'agent' | 'owner';
+  kind: 'briefing' | 'note' | 'reply';
+  body: string;
+  createdAt: string;
+};
+
+export type AgentFiling =
+  | {
+      kind: 'task';
+      sourceKey: string;
+      title: string;
+      detail?: string | null;
+      severity: AgentSeverity;
+      href?: string | null;
+    }
+  | { kind: 'resolve'; sourceKey: string }
+  | { kind: 'message'; messageKind: 'briefing' | 'note' | 'reply'; body: string }
+  | {
+      kind: 'approval';
+      sourceKey: string;
+      actionType: ApprovalActionType;
+      title: string;
+      summary: string;
+      payload: Record<string, unknown>;
+      risk: 'low' | 'medium' | 'high';
+    };
+
 export interface LifeRepository {
   listOpenTasks(limit: number): Promise<Task[]>;
   setTaskDone(id: string, done: boolean): Promise<Task>;
@@ -185,10 +243,25 @@ export interface CoreRepository {
   listAudit(filter: { domain?: Domain; limit: number }): Promise<AuditEntry[]>;
 }
 
+export interface TeamRepository {
+  listTasks(filter: {
+    status?: AgentTaskStatus;
+    agentKey?: AgentKey;
+    limit?: number;
+  }): Promise<AgentTask[]>;
+  /** Newest first. */
+  listMessages(filter: { agentKey?: AgentKey; limit: number }): Promise<AgentMessage[]>;
+  /** Agents write only through here, so every change is attributed to the agent. */
+  file(agentKey: AgentKey, filing: AgentFiling): Promise<void>;
+  setTaskStatus(id: string, status: AgentTaskStatus): Promise<void>;
+  postOwnerMessage(agentKey: AgentKey, body: string): Promise<void>;
+}
+
 export type Repositories = {
   life: LifeRepository;
   /** Generic, validated access to every My Life record type. */
   entities: EntityAccess;
   kouture: KoutureRepository;
+  team: TeamRepository;
   core: CoreRepository;
 };
