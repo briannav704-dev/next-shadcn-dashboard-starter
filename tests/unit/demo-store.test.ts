@@ -8,6 +8,7 @@ describe('sample-data store mirrors database rules', () => {
 
   it('only lets a pending approval be decided once, and audits it', async () => {
     const repos = createDemoRepositories();
+    const pendingBefore = await repos.core.countPendingApprovals();
     const [first] = await repos.core.listApprovals({ status: 'pending' });
     await repos.core.decideApproval(first.id, 'approved', 'ok');
     await expect(repos.core.decideApproval(first.id, 'rejected', null)).rejects.toSatisfy(
@@ -15,7 +16,7 @@ describe('sample-data store mirrors database rules', () => {
     );
     const audit = await repos.core.listAudit({ limit: 10 });
     expect(audit[0]).toMatchObject({ domain: 'core', entityType: 'approvals', entityId: first.id });
-    expect(await repos.core.countPendingApprovals()).toBe(2);
+    expect(await repos.core.countPendingApprovals()).toBe(pendingBefore - 1);
   });
 
   it('audits task and habit changes in the life domain', async () => {
@@ -33,5 +34,39 @@ describe('sample-data store mirrors database rules', () => {
     await expect(repos.life.setTaskDone('nope', true)).rejects.toSatisfy(
       (e: unknown) => isAppError(e) && e.code === 'NOT_FOUND'
     );
+  });
+
+  it('files agent work like the database: deduped, attributed, declined requests not refiled', async () => {
+    const repos = createDemoRepositories();
+    const approval = {
+      kind: 'approval' as const,
+      sourceKey: 'inv:restock:test',
+      actionType: 'make_purchase' as const,
+      title: 'Restock',
+      summary: 'Gel ×2',
+      payload: {},
+      risk: 'medium' as const
+    };
+    const before = await repos.core.countPendingApprovals();
+    await repos.team.file('inventory_manager', approval);
+    await repos.team.file('inventory_manager', approval);
+    expect(await repos.core.countPendingApprovals()).toBe(before + 1);
+    const [filed] = await repos.core.listApprovals({ status: 'pending', limit: 1 });
+    await repos.core.decideApproval(filed.id, 'rejected', null);
+    await repos.team.file('inventory_manager', approval);
+    expect(await repos.core.countPendingApprovals()).toBe(before);
+
+    const task = {
+      kind: 'task' as const,
+      sourceKey: 'inv:low',
+      title: 'Low',
+      severity: 'attention' as const
+    };
+    await repos.team.file('inventory_manager', task);
+    await repos.team.file('inventory_manager', { ...task, title: 'Lower' });
+    const open = await repos.team.listTasks({ status: 'open' });
+    expect(open.map((t) => t.title)).toEqual(['Lower']);
+    const audit = await repos.core.listAudit({ limit: 1 });
+    expect(audit[0]).toMatchObject({ actorType: 'agent', actorId: 'inventory_manager' });
   });
 });

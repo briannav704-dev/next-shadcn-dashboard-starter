@@ -10,7 +10,15 @@ import { seedLifeTables } from './demo-life-seed';
 import { createKoutureRepository } from './kouture-repository';
 import { createLifeRepository } from './life-repository';
 
-import type { Approval, AuditEntry, Domain, Repositories } from './types';
+import type {
+  AgentMessage,
+  AgentTask,
+  Approval,
+  AuditEntry,
+  Domain,
+  Repositories,
+  TeamRepository
+} from './types';
 
 // Sample-data mode: an in-memory store seeded relative to "today" so the app is
 // explorable before Supabase exists. It applies the same rules the database
@@ -22,6 +30,8 @@ const TZ = DEFAULT_TIMEZONE;
 type DemoState = {
   tables: DemoTables;
   approvals: Approval[];
+  agentTasks: AgentTask[];
+  agentMessages: AgentMessage[];
   audit: AuditEntry[];
   seq: () => number;
 };
@@ -66,52 +76,14 @@ function seed(): DemoState {
       decidedAt: null,
       expiresAt: expires,
       createdAt: nowIso
-    },
-    {
-      id: id('apr'),
-      domain: 'kouture',
-      requestedBy: 'client_relations',
-      actionType: 'send_message',
-      title: 'Win-back text to 6 lapsed clients',
-      summary:
-        'Clients not seen in 60+ days who have SMS consent. Offers 10% off a fill this month.',
-      payload: {
-        channel: 'sms',
-        recipients: 6,
-        body: 'Hi {first_name}! We miss you at Kouture 💅 Enjoy 10% off a fill this month. Reply STOP to opt out.'
-      },
-      risk: 'medium',
-      status: 'pending',
-      decisionNote: null,
-      decidedAt: null,
-      expiresAt: expires,
-      createdAt: nowIso
-    },
-    {
-      id: id('apr'),
-      domain: 'kouture',
-      requestedBy: 'inventory_manager',
-      actionType: 'make_purchase',
-      title: 'Restock: builder gel & top coat',
-      summary:
-        'Projected to run out in 9 days at current pace. Estimated $142.60 from your usual supplier.',
-      payload: {
-        vendor: 'usual supplier',
-        estimatedCents: 14260,
-        items: ['Builder gel clear ×3', 'No-wipe top coat ×2']
-      },
-      risk: 'medium',
-      status: 'pending',
-      decisionNote: null,
-      decidedAt: null,
-      expiresAt: expires,
-      createdAt: nowIso
     }
   ];
 
   return {
     tables,
     approvals,
+    agentTasks: [],
+    agentMessages: [],
     audit: [],
     seq: () => seq++
   };
@@ -129,14 +101,15 @@ function audit(
   action: string,
   entityType: string,
   entityId: string,
-  summary: string
+  summary: string,
+  actor: { type: AuditEntry['actorType']; id: string } = { type: 'owner', id: 'demo-owner' }
 ) {
   const s = state();
   s.audit.unshift({
     id: `aud_${s.seq().toString(36)}`,
     occurredAt: new Date().toISOString(),
-    actorType: 'owner',
-    actorId: 'demo-owner',
+    actorType: actor.type,
+    actorId: actor.id,
     domain,
     action,
     entityType,
@@ -154,12 +127,175 @@ function demoEntities(): EntityAccess {
   });
 }
 
+/** Mirrors kouture.agent_file(): upserts by source key, dedupes approvals, attributes to the agent. */
+function demoTeam(): TeamRepository {
+  const now = () => new Date().toISOString();
+  return {
+    async listTasks({ status, agentKey, limit }) {
+      return state()
+        .agentTasks.filter(
+          (t) => (!status || t.status === status) && (!agentKey || t.agentKey === agentKey)
+        )
+        .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .slice(0, limit ?? Infinity)
+        .map((t) => ({ ...t }));
+    },
+    async listMessages({ agentKey, limit }) {
+      // Newest last in storage; reversing first keeps same-millisecond messages in order.
+      return state()
+        .agentMessages.filter((m) => !agentKey || m.agentKey === agentKey)
+        .toReversed()
+        .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, limit)
+        .map((m) => ({ ...m }));
+    },
+    async file(agentKey, filing) {
+      const s = state();
+      const actor = { type: 'agent' as const, id: agentKey };
+      if (filing.kind === 'task') {
+        const existing = s.agentTasks.find((t) => t.sourceKey === filing.sourceKey);
+        const fields = {
+          title: filing.title,
+          detail: filing.detail ?? null,
+          severity: filing.severity,
+          href: filing.href ?? null
+        };
+        if (!existing) {
+          const task: AgentTask = {
+            id: `tsk_${s.seq().toString(36)}`,
+            agentKey,
+            sourceKey: filing.sourceKey,
+            ...fields,
+            status: 'open',
+            createdAt: now(),
+            updatedAt: now(),
+            resolvedAt: null
+          };
+          s.agentTasks.push(task);
+          audit(
+            'kouture',
+            'insert',
+            'agent_tasks',
+            task.id,
+            `Insert agent tasks: ${task.title}`,
+            actor
+          );
+          return;
+        }
+        const status = existing.status === 'dismissed' ? 'dismissed' : 'open';
+        const changed =
+          JSON.stringify([
+            existing.title,
+            existing.detail,
+            existing.severity,
+            existing.href,
+            existing.status
+          ]) !==
+          JSON.stringify([fields.title, fields.detail, fields.severity, fields.href, status]);
+        if (!changed) return;
+        Object.assign(existing, fields, {
+          status,
+          resolvedAt: status === 'dismissed' ? existing.resolvedAt : null,
+          updatedAt: now()
+        });
+        audit(
+          'kouture',
+          'update',
+          'agent_tasks',
+          existing.id,
+          `Update agent tasks: ${existing.title}`,
+          actor
+        );
+        return;
+      }
+      if (filing.kind === 'resolve') {
+        const task = s.agentTasks.find(
+          (t) => t.sourceKey === filing.sourceKey && t.status === 'open' && t.agentKey === agentKey
+        );
+        if (!task) return;
+        Object.assign(task, { status: 'done', resolvedAt: now(), updatedAt: now() });
+        audit(
+          'kouture',
+          'update',
+          'agent_tasks',
+          task.id,
+          `Update agent tasks: ${task.title}`,
+          actor
+        );
+        return;
+      }
+      if (filing.kind === 'message') {
+        const message: AgentMessage = {
+          id: `msg_${s.seq().toString(36)}`,
+          agentKey,
+          author: 'agent',
+          kind: filing.messageKind,
+          body: filing.body,
+          createdAt: now()
+        };
+        s.agentMessages.push(message);
+        audit('kouture', 'insert', 'agent_messages', message.id, 'Insert agent messages', actor);
+        return;
+      }
+      if (s.approvals.some((a) => a.payload.sourceKey === filing.sourceKey)) return;
+      const approval: Approval = {
+        id: `apr_${s.seq().toString(36)}`,
+        domain: 'kouture',
+        requestedBy: agentKey,
+        actionType: filing.actionType,
+        title: filing.title,
+        summary: filing.summary,
+        payload: { ...filing.payload, sourceKey: filing.sourceKey },
+        risk: filing.risk,
+        status: 'pending',
+        decisionNote: null,
+        decidedAt: null,
+        expiresAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+        createdAt: now()
+      };
+      s.approvals.unshift(approval);
+      audit(
+        'kouture',
+        'insert',
+        'approvals',
+        approval.id,
+        `Insert approvals: ${approval.title}`,
+        actor
+      );
+    },
+    async setTaskStatus(id, status) {
+      const task = state().agentTasks.find((t) => t.id === id);
+      if (!task) throw new AppError('NOT_FOUND', 'That task no longer exists.');
+      Object.assign(task, {
+        status,
+        resolvedAt: status === 'open' ? null : now(),
+        updatedAt: now()
+      });
+      audit('kouture', 'update', 'agent_tasks', id, `Update agent tasks: ${task.title}`);
+    },
+    async postOwnerMessage(agentKey, body) {
+      const s = state();
+      const message: AgentMessage = {
+        id: `msg_${s.seq().toString(36)}`,
+        agentKey,
+        author: 'owner',
+        kind: 'note',
+        body,
+        createdAt: now()
+      };
+      s.agentMessages.push(message);
+      audit('kouture', 'insert', 'agent_messages', message.id, 'Insert agent messages');
+    }
+  };
+}
+
 export function createDemoRepositories(): Repositories {
   const entities = demoEntities();
   return {
     life: createLifeRepository(entities),
     entities,
     kouture: createKoutureRepository(entities),
+    team: demoTeam(),
     core: {
       async getProfile() {
         return {
