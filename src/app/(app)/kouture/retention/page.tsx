@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { Icons } from '@/components/icons';
+import { CopyButton } from '@/components/lux/copy-button';
 import PageContainer from '@/components/layout/page-container';
 import { EmptyNote } from '@/components/lux/empty-note';
 import { SectionCard } from '@/components/lux/section-card';
@@ -90,13 +91,22 @@ function OutreachRow({
         <p className='text-muted-foreground truncate text-xs'>{detail}</p>
       </div>
       {canText ? (
-        <a
-          href={smsHref(client.phone as string, message(kind, client.fullName, link))}
-          className='border-rose/40 text-rose hover:bg-blush inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium'
-        >
-          <Icons.chat className='size-3.5' aria-hidden />
-          Text
-        </a>
+        <div className='flex shrink-0 items-center gap-1'>
+          {/* For Google Voice: copy, then paste into a text to their number. */}
+          <CopyButton
+            text={message(kind, client.fullName, link)}
+            label='Copy'
+            done={`Message copied. Paste it into Google Voice for ${client.phone}.`}
+            ariaLabel={`Copy message for ${client.fullName}`}
+          />
+          <a
+            href={smsHref(client.phone as string, message(kind, client.fullName, link))}
+            className='border-rose/40 text-rose hover:bg-blush inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium'
+          >
+            <Icons.chat className='size-3.5' aria-hidden />
+            Text
+          </a>
+        </div>
       ) : (
         <span
           className='text-muted-foreground shrink-0 text-xs'
@@ -127,7 +137,7 @@ export default async function RetentionPage() {
     <PageContainer
       eyebrow='Kouture · Growth'
       pageTitle='Client retention'
-      pageDescription='Who to reach out to this week. “Text” opens Messages with a note ready; you review and send it yourself.'
+      pageDescription='Who to reach out to this week. “Text” opens your phone’s Messages with a note ready; “Copy” copies it so you can paste it into Google Voice. You review and send it yourself.'
     >
       <div className='grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4'>
         <StatCard label='Due now' icon='clock' value={String(counts.due)} />
