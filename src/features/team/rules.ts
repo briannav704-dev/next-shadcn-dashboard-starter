@@ -513,7 +513,6 @@ export function runTeam(s: TeamSnapshot): TeamReport {
 
 /** Rule-based answers for the chat while the AI brain is off. */
 export function quickAnswer(
-  agent: AgentKey,
   ask: 'needs' | 'update' | 'done',
   context: {
     open: { title: string; detail: string | null }[];

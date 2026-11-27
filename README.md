@@ -16,7 +16,8 @@ Built with Next.js 16, Supabase (Postgres, Auth, Row Level Security), shadcn/ui 
 | 3 | My Life modules: planner, calendar, tasks, habits, budget, savings, fitness, workouts, meals, travel, self-care, goals, journal | Done |
 | 4 | Kouture business modules: appointments with Nailzy calendar sync, clients and notes, services, revenue and expenses, profit reports, analytics, taxes, inventory, marketing calendar, social planner, retention, policies | Done |
 | 5 | AI management team: CEO, Operations, Client Relations, Marketing, Finance, Inventory and Analyst agents with task lists, chat, daily briefings and approval drafts. Rule-based today ($0); AI brain optional later | Done |
-| 5b | Personal assistant for My Life | Next |
+| 5b | Personal assistant for My Life (Sophie): overdue tasks, habits, budget, savings, self-care, trips, daily briefing and chat; life-only and journal-private | Done |
+| 6 | Integrations: free email marketing first, then the approval executor | Next |
 | 6 | Integrations and approval executor | |
 | 7 | Security testing, backups, deployment | |
 

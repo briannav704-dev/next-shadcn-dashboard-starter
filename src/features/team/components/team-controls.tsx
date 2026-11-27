@@ -10,22 +10,47 @@ import type { AgentKey, AgentMessage, AgentTask } from '@/server/data/types';
 
 import type { QuickAsk } from '../agents';
 import {
+  askAssistantAction,
+  runAssistantAction,
+  sendAssistantNoteAction,
+  setAssistantTaskStatusAction
+} from '@/features/assistant/server/actions';
+
+import {
   askAgentAction,
   runTeamAction,
   sendAgentNoteAction,
   setAgentTaskStatusAction
 } from '../server/actions';
 
+type ChatMessage = Pick<AgentMessage, 'id' | 'kind' | 'body' | 'createdAt'> & {
+  author: 'owner' | 'agent' | 'assistant';
+};
+
+/** Which helper a control talks to: the Kouture team or the My Life assistant. */
+export type Scope = { kind: 'team'; agent?: AgentKey } | { kind: 'assistant' };
+
 const STALE_MS = 6 * 3_600_000;
 
 /** Runs the team when its last briefing is stale, and offers a manual run. */
-export function RunTeamButton({ lastRunAt }: { lastRunAt: string | null }) {
+export function RunTeamButton({
+  lastRunAt,
+  scope = { kind: 'team' },
+  label = 'Run the team'
+}: {
+  lastRunAt: string | null;
+  scope?: Scope;
+  label?: string;
+}) {
   const [pending, startTransition] = useTransition();
   const autoRan = useRef(false);
 
   function run(force: boolean, quiet = false) {
     startTransition(async () => {
-      const result = await runTeamAction({ force });
+      const result =
+        scope.kind === 'team'
+          ? await runTeamAction({ force })
+          : await runAssistantAction({ force });
       if (!result.ok) {
         if (!quiet) toast.error(result.error);
         return;
@@ -34,8 +59,8 @@ export function RunTeamButton({ lastRunAt }: { lastRunAt: string | null }) {
       if (!quiet || opened + closed > 0) {
         toast.success(
           opened + closed > 0
-            ? `Team updated: ${opened} new, ${closed} cleared`
-            : 'Team checked in: nothing new'
+            ? `Updated: ${opened} new, ${closed} cleared`
+            : 'Checked in: nothing new'
         );
       }
     });
@@ -58,7 +83,7 @@ export function RunTeamButton({ lastRunAt }: { lastRunAt: string | null }) {
       disabled={pending}
     >
       <Icons.switch className={cn(pending && 'animate-spin')} />
-      {pending ? 'Checking…' : 'Run the team'}
+      {pending ? 'Checking…' : label}
     </Button>
   );
 }
@@ -69,11 +94,21 @@ const SEVERITY_STYLE = {
   info: 'bg-muted text-muted-foreground'
 } as const;
 
-export function TaskActions({ task }: { task: AgentTask }) {
+export function TaskActions({
+  task,
+  scope = { kind: 'team' }
+}: {
+  task: Pick<AgentTask, 'id' | 'title' | 'status'>;
+  scope?: Scope;
+}) {
   const [pending, startTransition] = useTransition();
   function set(status: 'done' | 'dismissed' | 'open') {
     startTransition(async () => {
-      const result = await setAgentTaskStatusAction({ taskId: task.id, status });
+      const input = { taskId: task.id, status };
+      const result =
+        scope.kind === 'team'
+          ? await setAgentTaskStatusAction(input)
+          : await setAssistantTaskStatusAction(input);
       if (!result.ok) toast.error(result.error);
     });
   }
@@ -127,19 +162,20 @@ export function SeverityPill({ severity }: { severity: AgentTask['severity'] }) 
 }
 
 export function AgentChat({
-  agent,
+  scope,
   agentName,
   messages,
   quickAsks,
   timeZone
 }: {
-  agent: AgentKey;
+  scope: Scope;
   agentName: string;
   /** Oldest first. */
-  messages: AgentMessage[];
-  quickAsks: { id: QuickAsk; label: string }[];
+  messages: ChatMessage[];
+  quickAsks: readonly { id: QuickAsk; label: string }[];
   timeZone: string;
 }) {
+  const chatId = scope.kind === 'team' ? (scope.agent ?? 'team') : 'assistant';
   const [draft, setDraft] = useState('');
   const [pending, startTransition] = useTransition();
   const endRef = useRef<HTMLDivElement>(null);
@@ -150,7 +186,10 @@ export function AgentChat({
 
   function ask(id: QuickAsk) {
     startTransition(async () => {
-      const result = await askAgentAction({ agent, ask: id });
+      const result =
+        scope.kind === 'team' && scope.agent
+          ? await askAgentAction({ agent: scope.agent, ask: id })
+          : await askAssistantAction({ ask: id });
       if (!result.ok) toast.error(result.error);
     });
   }
@@ -160,7 +199,10 @@ export function AgentChat({
     const body = draft.trim();
     if (!body) return;
     startTransition(async () => {
-      const result = await sendAgentNoteAction({ agent, body });
+      const result =
+        scope.kind === 'team' && scope.agent
+          ? await sendAgentNoteAction({ agent: scope.agent, body })
+          : await sendAssistantNoteAction({ body });
       if (result.ok) setDraft('');
       else toast.error(result.error);
     });
@@ -234,11 +276,11 @@ export function AgentChat({
         ))}
       </div>
       <form onSubmit={send} className='mt-3 flex items-end gap-2'>
-        <label htmlFor={`note-${agent}`} className='sr-only'>
+        <label htmlFor={`note-${chatId}`} className='sr-only'>
           Message {agentName}
         </label>
         <textarea
-          id={`note-${agent}`}
+          id={`note-${chatId}`}
           rows={2}
           value={draft}
           maxLength={2000}

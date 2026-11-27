@@ -65,7 +65,7 @@ export async function askAgentAction(input: z.infer<typeof askSchema>): Promise<
     await repos.team.file(agent, {
       kind: 'message',
       messageKind: 'reply',
-      body: quickAnswer(agent, ask, { open, done, briefing })
+      body: quickAnswer(ask, { open, done, briefing })
     });
     refresh(agent);
     return undefined;
