@@ -18,7 +18,6 @@ Built with Next.js 16, Supabase (Postgres, Auth, Row Level Security), shadcn/ui 
 | 5 | AI management team: CEO, Operations, Client Relations, Marketing, Finance, Inventory and Analyst agents with task lists, chat, daily briefings and approval drafts. Rule-based today ($0); AI brain optional later | Done |
 | 5b | Personal assistant for My Life (Sophie): overdue tasks, habits, budget, savings, self-care, trips, daily briefing and chat; life-only and journal-private | Done |
 | 6 | Integrations: free email marketing first, then the approval executor | Next |
-| 6 | Integrations and approval executor | |
 | 7 | Security testing, backups, deployment | |
 
 ## Quick start
