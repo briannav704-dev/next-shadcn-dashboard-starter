@@ -267,11 +267,11 @@ describe('ceo briefing and quick answers', () => {
   });
 
   it('answers quick questions from the agent’s own list', () => {
-    expect(quickAnswer('ceo', 'needs', { open: [], done: [], briefing: null })).toBe(
+    expect(quickAnswer('needs', { open: [], done: [], briefing: null })).toBe(
       'Nothing needs you from me right now.'
     );
     expect(
-      quickAnswer('ceo', 'needs', { open: [{ title: 'A', detail: 'b' }], done: [], briefing: null })
+      quickAnswer('needs', { open: [{ title: 'A', detail: 'b' }], done: [], briefing: null })
     ).toBe('1. A: b');
   });
 });

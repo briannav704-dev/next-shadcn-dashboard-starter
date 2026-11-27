@@ -65,7 +65,7 @@ export default async function AgentPage({ params }: PageProps) {
         <div className='lg:col-span-7'>
           <SectionCard title={`Chat with ${agent.name}`} eyebrow='Quick answers · AI brain off'>
             <AgentChat
-              agent={key}
+              scope={{ kind: 'team', agent: key }}
               agentName={agent.name}
               messages={messages.toReversed()}
               quickAsks={agent.quickAsks}

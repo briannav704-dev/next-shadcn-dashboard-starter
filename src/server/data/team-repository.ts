@@ -3,7 +3,15 @@ import 'server-only';
 import { AppError } from '@/server/errors';
 import type { SupabaseServerClient } from '@/server/supabase';
 
-import type { AgentFiling, AgentMessage, AgentTask, TeamRepository } from './types';
+import type {
+  AgentFiling,
+  AgentMessage,
+  AgentTask,
+  AssistantMessage,
+  AssistantRepository,
+  AssistantTask,
+  TeamRepository
+} from './types';
 
 type PgError = { message: string; code?: string } | null;
 
@@ -155,4 +163,87 @@ export function createSupabaseTeamRepository(db: SupabaseServerClient): TeamRepo
       if (error) fail(error, 'send your message');
     }
   };
+}
+
+export function createSupabaseAssistantRepository(db: SupabaseServerClient): AssistantRepository {
+  const life = db.schema('life');
+  return {
+    async listTasks({ status, limit }) {
+      let q = life
+        .from('assistant_tasks')
+        .select(TASK_COLUMNS.replace('agent_key, ', ''))
+        .order('updated_at', { ascending: false });
+      if (status) q = q.eq('status', status);
+      if (limit) q = q.limit(limit);
+      const { data, error } = await q;
+      if (error) failAssistant(error, 'load your assistant’s list');
+      return ((data ?? []) as unknown as Omit<TaskRow, 'agent_key'>[]).map((r): AssistantTask => ({
+        id: r.id,
+        sourceKey: r.source_key,
+        title: r.title,
+        detail: r.detail,
+        severity: r.severity,
+        href: r.href,
+        status: r.status,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+        resolvedAt: r.resolved_at
+      }));
+    },
+    async listMessages(limit) {
+      const { data, error } = await life
+        .from('assistant_messages')
+        .select('id, author, kind, body, created_at')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) failAssistant(error, 'load messages');
+      return (
+        (data ?? []) as {
+          id: string;
+          author: AssistantMessage['author'];
+          kind: AssistantMessage['kind'];
+          body: string;
+          created_at: string;
+        }[]
+      ).map((r) => ({
+        id: r.id,
+        author: r.author,
+        kind: r.kind,
+        body: r.body,
+        createdAt: r.created_at
+      }));
+    },
+    async file(filing) {
+      const { kind, data } = filingPayload(filing);
+      const { error } = await life.rpc('assistant_file', { p_kind: kind, p_data: data });
+      if (error) failAssistant(error, 'record your assistant’s work');
+    },
+    async setTaskStatus(id, status) {
+      const { error, count } = await life
+        .from('assistant_tasks')
+        .update(
+          { status, resolved_at: status === 'open' ? null : new Date().toISOString() },
+          { count: 'exact' }
+        )
+        .eq('id', id);
+      if (error) failAssistant(error, 'update that item');
+      if (count === 0) throw new AppError('NOT_FOUND', 'That item no longer exists.');
+    },
+    async postOwnerMessage(body) {
+      const { error } = await life
+        .from('assistant_messages')
+        .insert({ author: 'owner', kind: 'note', body });
+      if (error) failAssistant(error, 'send your message');
+    }
+  };
+}
+
+function failAssistant(error: PgError, what: string): never {
+  if (error?.code && MISSING.has(error.code)) {
+    throw new AppError(
+      'INVALID',
+      'Your database needs the personal assistant update. Paste supabase/migrations/20261129000001_personal_assistant.sql into the Supabase SQL Editor and run it once.'
+    );
+  }
+  fail(error, what);
 }

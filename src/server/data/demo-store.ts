@@ -14,6 +14,9 @@ import type {
   AgentMessage,
   AgentTask,
   Approval,
+  AssistantMessage,
+  AssistantRepository,
+  AssistantTask,
   AuditEntry,
   Domain,
   Repositories,
@@ -32,6 +35,8 @@ type DemoState = {
   approvals: Approval[];
   agentTasks: AgentTask[];
   agentMessages: AgentMessage[];
+  assistantTasks: AssistantTask[];
+  assistantMessages: AssistantMessage[];
   audit: AuditEntry[];
   seq: () => number;
 };
@@ -84,6 +89,8 @@ function seed(): DemoState {
     approvals,
     agentTasks: [],
     agentMessages: [],
+    assistantTasks: [],
+    assistantMessages: [],
     audit: [],
     seq: () => seq++
   };
@@ -289,6 +296,133 @@ function demoTeam(): TeamRepository {
   };
 }
 
+/** Mirrors life.assistant_file(), attributed to the assistant. */
+function demoAssistant(): AssistantRepository {
+  const now = () => new Date().toISOString();
+  const actor = { type: 'assistant' as const, id: 'life_assistant' };
+  return {
+    async listTasks({ status, limit }) {
+      return state()
+        .assistantTasks.filter((t) => !status || t.status === status)
+        .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .slice(0, limit ?? Infinity)
+        .map((t) => ({ ...t }));
+    },
+    async listMessages(limit) {
+      return state()
+        .assistantMessages.toReversed()
+        .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, limit)
+        .map((m) => ({ ...m }));
+    },
+    async file(filing) {
+      const s = state();
+      if (filing.kind === 'task') {
+        const fields = {
+          title: filing.title,
+          detail: filing.detail ?? null,
+          severity: filing.severity,
+          href: filing.href ?? null
+        };
+        const existing = s.assistantTasks.find((t) => t.sourceKey === filing.sourceKey);
+        if (!existing) {
+          const task: AssistantTask = {
+            id: `ast_${s.seq().toString(36)}`,
+            sourceKey: filing.sourceKey,
+            ...fields,
+            status: 'open',
+            createdAt: now(),
+            updatedAt: now(),
+            resolvedAt: null
+          };
+          s.assistantTasks.push(task);
+          audit(
+            'life',
+            'insert',
+            'assistant_tasks',
+            task.id,
+            `Insert assistant tasks: ${task.title}`,
+            actor
+          );
+          return;
+        }
+        const status = existing.status === 'dismissed' ? 'dismissed' : 'open';
+        const changed =
+          JSON.stringify([
+            existing.title,
+            existing.detail,
+            existing.severity,
+            existing.href,
+            existing.status
+          ]) !==
+          JSON.stringify([fields.title, fields.detail, fields.severity, fields.href, status]);
+        if (!changed) return;
+        Object.assign(existing, fields, {
+          status,
+          resolvedAt: status === 'dismissed' ? existing.resolvedAt : null,
+          updatedAt: now()
+        });
+        audit(
+          'life',
+          'update',
+          'assistant_tasks',
+          existing.id,
+          `Update assistant tasks: ${existing.title}`,
+          actor
+        );
+        return;
+      }
+      if (filing.kind === 'resolve') {
+        const task = s.assistantTasks.find(
+          (t) => t.sourceKey === filing.sourceKey && t.status === 'open'
+        );
+        if (!task) return;
+        Object.assign(task, { status: 'done', resolvedAt: now(), updatedAt: now() });
+        audit(
+          'life',
+          'update',
+          'assistant_tasks',
+          task.id,
+          `Update assistant tasks: ${task.title}`,
+          actor
+        );
+        return;
+      }
+      const message: AssistantMessage = {
+        id: `amg_${s.seq().toString(36)}`,
+        author: 'assistant',
+        kind: filing.messageKind,
+        body: filing.body,
+        createdAt: now()
+      };
+      s.assistantMessages.push(message);
+      audit('life', 'insert', 'assistant_messages', message.id, 'Insert assistant messages', actor);
+    },
+    async setTaskStatus(id, status) {
+      const task = state().assistantTasks.find((t) => t.id === id);
+      if (!task) throw new AppError('NOT_FOUND', 'That item no longer exists.');
+      Object.assign(task, {
+        status,
+        resolvedAt: status === 'open' ? null : now(),
+        updatedAt: now()
+      });
+      audit('life', 'update', 'assistant_tasks', id, `Update assistant tasks: ${task.title}`);
+    },
+    async postOwnerMessage(body) {
+      const s = state();
+      const message: AssistantMessage = {
+        id: `amg_${s.seq().toString(36)}`,
+        author: 'owner',
+        kind: 'note',
+        body,
+        createdAt: now()
+      };
+      s.assistantMessages.push(message);
+      audit('life', 'insert', 'assistant_messages', message.id, 'Insert assistant messages');
+    }
+  };
+}
+
 export function createDemoRepositories(): Repositories {
   const entities = demoEntities();
   return {
@@ -296,6 +430,7 @@ export function createDemoRepositories(): Repositories {
     entities,
     kouture: createKoutureRepository(entities),
     team: demoTeam(),
+    assistant: demoAssistant(),
     core: {
       async getProfile() {
         return {

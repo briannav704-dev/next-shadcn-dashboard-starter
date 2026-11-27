@@ -6,7 +6,7 @@ import type { SupabaseServerClient } from '@/server/supabase';
 
 import { createKoutureRepository } from './kouture-repository';
 import { createLifeRepository } from './life-repository';
-import { createSupabaseTeamRepository } from './team-repository';
+import { createSupabaseAssistantRepository, createSupabaseTeamRepository } from './team-repository';
 
 import type { Approval, AuditEntry, Repositories } from './types';
 
@@ -70,6 +70,7 @@ export function createSupabaseRepositories(
 
     kouture: createKoutureRepository(entities),
     team: createSupabaseTeamRepository(db),
+    assistant: createSupabaseAssistantRepository(db),
 
     core: {
       async getProfile() {

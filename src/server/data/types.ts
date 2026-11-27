@@ -243,6 +243,22 @@ export interface CoreRepository {
   listAudit(filter: { domain?: Domain; limit: number }): Promise<AuditEntry[]>;
 }
 
+export type AssistantTask = Omit<AgentTask, 'agentKey'>;
+export type AssistantMessage = Omit<AgentMessage, 'agentKey' | 'author'> & {
+  author: 'assistant' | 'owner';
+};
+export type AssistantFiling = Exclude<AgentFiling, { kind: 'approval' }>;
+
+/** The My Life personal assistant: same shape as a team member, life domain only. */
+export interface AssistantRepository {
+  listTasks(filter: { status?: AgentTaskStatus; limit?: number }): Promise<AssistantTask[]>;
+  /** Newest first. */
+  listMessages(limit: number): Promise<AssistantMessage[]>;
+  file(filing: AssistantFiling): Promise<void>;
+  setTaskStatus(id: string, status: AgentTaskStatus): Promise<void>;
+  postOwnerMessage(body: string): Promise<void>;
+}
+
 export interface TeamRepository {
   listTasks(filter: {
     status?: AgentTaskStatus;
@@ -263,5 +279,6 @@ export type Repositories = {
   entities: EntityAccess;
   kouture: KoutureRepository;
   team: TeamRepository;
+  assistant: AssistantRepository;
   core: CoreRepository;
 };

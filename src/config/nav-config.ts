@@ -14,6 +14,7 @@ export const NAV: Record<Environment, NavGroup[]> = {
       label: 'Today',
       items: [
         { title: 'Dashboard', url: '/life', icon: 'home' },
+        { title: 'Assistant', url: '/life/assistant', icon: 'agent' },
         { title: 'Daily planner', url: '/life/planner', icon: 'planner' },
         { title: 'Calendar', url: '/life/calendar', icon: 'calendarEvent' },
         { title: 'Tasks', url: '/life/tasks', icon: 'checklist' },
