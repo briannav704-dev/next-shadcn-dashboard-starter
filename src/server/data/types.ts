@@ -240,6 +240,8 @@ export interface CoreRepository {
     decision: 'approved' | 'rejected',
     note: string | null
   ): Promise<Approval>;
+  /** Approved → executed/failed, once. `result` is appended to the decision note. */
+  completeApproval(id: string, outcome: 'executed' | 'failed', result: string): Promise<Approval>;
   listAudit(filter: { domain?: Domain; limit: number }): Promise<AuditEntry[]>;
 }
 

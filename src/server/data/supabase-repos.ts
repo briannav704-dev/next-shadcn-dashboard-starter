@@ -128,6 +128,29 @@ export function createSupabaseRepositories(
         if (!result.data) throw new AppError('CONFLICT', 'This request was already decided.');
         return toApproval(result.data as ApprovalRow);
       },
+      async completeApproval(id, outcome, result) {
+        const current = check(
+          await core.from('approvals').select(APPROVAL_COLUMNS).eq('id', id).single(),
+          'load that request'
+        ) as ApprovalRow;
+        if (current.status !== 'approved') {
+          throw new AppError('CONFLICT', `This request is ${current.status}, not waiting to run.`);
+        }
+        const note = [current.decision_note, result].filter(Boolean).join('\n').slice(0, 2000);
+        // The status filter makes a double tap a no-op; the guard trigger checks the transition.
+        const updated = await core
+          .from('approvals')
+          .update({ status: outcome, decision_note: note })
+          .eq('id', id)
+          .eq('status', 'approved')
+          .select(APPROVAL_COLUMNS)
+          .maybeSingle();
+        if (updated.error) {
+          throw new AppError('UPSTREAM', 'Failed to record the result', { cause: updated.error });
+        }
+        if (!updated.data) throw new AppError('CONFLICT', 'This request was already completed.');
+        return toApproval(updated.data as ApprovalRow);
+      },
       async listAudit({ domain, limit }) {
         let query = core
           .from('audit_log')

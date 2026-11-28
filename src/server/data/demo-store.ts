@@ -471,6 +471,23 @@ export function createDemoRepositories(): Repositories {
         );
         return { ...approval };
       },
+      async completeApproval(id, outcome, result) {
+        const approval = state().approvals.find((a) => a.id === id);
+        if (!approval) throw new AppError('NOT_FOUND', 'That request no longer exists.');
+        if (approval.status !== 'approved') {
+          throw new AppError('CONFLICT', `This request is ${approval.status}, not waiting to run.`);
+        }
+        approval.status = outcome;
+        approval.decisionNote = [approval.decisionNote, result].filter(Boolean).join('\n');
+        audit(
+          'core',
+          'update',
+          'approvals',
+          id,
+          `${outcome === 'executed' ? 'Done' : 'Failed'}: ${approval.title}`
+        );
+        return { ...approval };
+      },
       async listAudit({ domain, limit }) {
         return state()
           .audit.filter((e) => !domain || e.domain === domain)
