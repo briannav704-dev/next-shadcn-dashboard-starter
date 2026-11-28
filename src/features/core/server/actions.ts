@@ -30,16 +30,19 @@ export async function decideApprovalAction(
   });
 }
 
-const runSchema = z.object({ approvalId: z.string().min(1).max(64) });
+const runSchema = z.object({
+  approvalId: z.string().min(1).max(64),
+  manual: z.boolean().default(false)
+});
 
 /**
  * Runs an approved request, once. Text campaigns are sent through Twilio;
  * anything the app can't do itself is marked done after the owner did it.
  */
 export async function runApprovedAction(
-  input: z.infer<typeof runSchema>
+  input: z.input<typeof runSchema>
 ): Promise<ActionResult<{ summary: string }>> {
-  return runAction(runSchema, input, async ({ approvalId }) => {
+  return runAction(runSchema, input, async ({ approvalId, manual }) => {
     const session = await requireOwnerAction();
     const now = new Date();
     const approval = (await session.repos.core.listApprovals({ limit: 200 })).find(
@@ -50,10 +53,10 @@ export async function runApprovedAction(
       throw new AppError('CONFLICT', `This request is ${approval.status}, not waiting to run.`);
     }
     let summary: string;
-    if (isTextCampaign(approval)) {
+    if (isTextCampaign(approval) && !manual) {
       summary = await sendApprovedTexts(session, approval, now);
     } else {
-      summary = 'Marked done by you.';
+      summary = isTextCampaign(approval) ? 'Sent by you.' : 'Marked done by you.';
       await session.repos.core.completeApproval(approval.id, 'executed', summary);
     }
     revalidatePath('/', 'layout');

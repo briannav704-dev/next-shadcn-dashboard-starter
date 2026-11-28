@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import type { Approval } from '@/server/data/types';
 
 import { ACTION_LABEL, agentLabel } from '../lib/labels';
-import { decideApprovalAction } from '../server/actions';
+import { decideApprovalAction, runApprovedAction } from '../server/actions';
 
 const RISK_STYLE: Record<Approval['risk'], string> = {
   low: 'bg-muted text-muted-foreground',
@@ -39,7 +39,8 @@ function formatWhen(iso: string) {
 
 /** Pretty-prints the frozen payload so you see exactly what would run. */
 function PayloadView({ payload }: { payload: Record<string, unknown> }) {
-  const entries = Object.entries(payload);
+  // sourceKey is the team's internal de-duplication key, not something to review.
+  const entries = Object.entries(payload).filter(([key]) => key !== 'sourceKey');
   if (entries.length === 0) return null;
   return (
     <dl className='bg-muted/60 mt-3 grid gap-x-4 gap-y-1.5 rounded-xl p-3 text-xs sm:grid-cols-[8rem_1fr]'>
@@ -50,7 +51,19 @@ function PayloadView({ payload }: { payload: Record<string, unknown> }) {
           </dt>
           <dd className='min-w-0 break-words whitespace-pre-wrap'>
             {Array.isArray(value)
-              ? value.join(', ')
+              ? value
+                  .map((v) =>
+                    v && typeof v === 'object'
+                      ? (() => {
+                          const item = v as Record<string, unknown>;
+                          if (!item.name) return JSON.stringify(v);
+                          return item.quantity
+                            ? `${item.name} ×${item.quantity}`
+                            : String(item.name);
+                        })()
+                      : String(v)
+                  )
+                  .join(', ')
               : typeof value === 'object'
                 ? JSON.stringify(value)
                 : String(value)}
@@ -61,11 +74,33 @@ function PayloadView({ payload }: { payload: Record<string, unknown> }) {
   );
 }
 
-export function ApprovalCard({ approval }: { approval: Approval }) {
+export function ApprovalCard({
+  approval,
+  textingConnected = false
+}: {
+  approval: Approval;
+  textingConnected?: boolean;
+}) {
   const [note, setNote] = useState('');
   const [showNote, setShowNote] = useState(false);
   const [pending, startTransition] = useTransition();
   const isPending = approval.status === 'pending';
+
+  const isText =
+    approval.domain === 'kouture' &&
+    approval.actionType === 'send_message' &&
+    approval.payload.channel === 'sms';
+  const recipientCount = Array.isArray(approval.payload.recipients)
+    ? approval.payload.recipients.length
+    : 0;
+
+  function run(manual = false) {
+    startTransition(async () => {
+      const result = await runApprovedAction({ approvalId: approval.id, manual });
+      if (result.ok) toast.success(result.data.summary);
+      else toast.error(result.error);
+    });
+  }
 
   function decide(decision: 'approved' | 'rejected') {
     startTransition(async () => {
@@ -135,6 +170,48 @@ export function ApprovalCard({ approval }: { approval: Approval }) {
           {approval.decidedAt ? ` · decided ${formatWhen(approval.decidedAt)}` : ''}
           {approval.decisionNote ? ` · “${approval.decisionNote}”` : ''}
         </p>
+        {approval.status === 'approved' &&
+          (isText ? (
+            textingConnected ? (
+              <Button
+                size='lg'
+                className='rounded-full px-5'
+                onClick={() => run()}
+                disabled={pending}
+              >
+                {pending ? <Icons.spinner className='animate-spin' /> : <Icons.send />}
+                Send {recipientCount} {recipientCount === 1 ? 'text' : 'texts'}
+              </Button>
+            ) : (
+              <div className='flex flex-wrap items-center gap-2'>
+                <p className='text-muted-foreground max-w-xs text-xs'>
+                  Automatic texting is off. Send these yourself (Copy on Client retention), then
+                  mark them sent.
+                </p>
+                <Button
+                  variant='outline'
+                  size='lg'
+                  className='rounded-full px-4'
+                  onClick={() => run(true)}
+                  disabled={pending}
+                >
+                  <Icons.check />
+                  I sent these myself
+                </Button>
+              </div>
+            )
+          ) : (
+            <Button
+              variant='outline'
+              size='lg'
+              className='rounded-full px-4'
+              onClick={() => run()}
+              disabled={pending}
+            >
+              {pending ? <Icons.spinner className='animate-spin' /> : <Icons.check />}
+              I did this
+            </Button>
+          ))}
         {isPending && (
           <div className='flex flex-wrap items-center gap-2'>
             <Button

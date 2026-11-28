@@ -90,3 +90,19 @@ into the SQL Editor and run it once.
 | "That sign-in link was invalid or expired" | Request a new link. Make sure the Redirect URL in Part 3 matches your address exactly. |
 | Pages say "This page didn't load" | Check step 5 of Part 1 (Exposed schemas: core, life, kouture). |
 | The SQL said "already exists" | It was run twice; nothing is broken. |
+
+---
+
+## Optional, later: automatic texts (Twilio)
+
+Off by default and free until you do this. Costs roughly $20 once (carrier
+registration) plus about $3–4/month and about 1¢ per text.
+
+1. Sign up at **twilio.com**, buy a local number, and complete **A2P 10DLC → Sole
+   Proprietor** registration (carriers require it for business texts).
+2. In Vercel → Settings → Environment Variables, add (mark each **Sensitive**):
+   `TWILIO_ACCOUNT_SID` (starts with AC), `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM`
+   (your Twilio number as +1…, or the Messaging Service SID starting with MG).
+3. Redeploy. Approved text requests then show **Send texts** in Approvals. Texts go
+   only to clients who agreed, only 8am–9pm, always with "Reply STOP to opt out";
+   anyone who replies STOP is marked opted out automatically.

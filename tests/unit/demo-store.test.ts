@@ -70,3 +70,21 @@ describe('sample-data store mirrors database rules', () => {
     expect(audit[0]).toMatchObject({ actorType: 'agent', actorId: 'inventory_manager' });
   });
 });
+
+describe('completing approved requests', () => {
+  beforeEach(() => resetDemoStore());
+
+  it('runs an approved request once and refuses pending or finished ones', async () => {
+    const repos = createDemoRepositories();
+    const [first] = await repos.core.listApprovals({ status: 'pending' });
+    await expect(repos.core.completeApproval(first.id, 'executed', 'x')).rejects.toSatisfy(
+      (e: unknown) => isAppError(e) && e.code === 'CONFLICT'
+    );
+    await repos.core.decideApproval(first.id, 'approved', 'ok');
+    const done = await repos.core.completeApproval(first.id, 'executed', 'Sent 3.');
+    expect(done).toMatchObject({ status: 'executed', decisionNote: 'ok\nSent 3.' });
+    await expect(repos.core.completeApproval(first.id, 'executed', 'again')).rejects.toSatisfy(
+      (e: unknown) => isAppError(e) && e.code === 'CONFLICT'
+    );
+  });
+});
