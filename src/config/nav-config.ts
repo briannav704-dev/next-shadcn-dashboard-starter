@@ -79,6 +79,7 @@ export const NAV: Record<Environment, NavGroup[]> = {
           icon: 'marketing'
         },
         { title: 'Social planner', url: '/kouture/social', icon: 'social' },
+        { title: 'Email campaigns', url: '/kouture/email', icon: 'mail' },
         {
           title: 'Client retention',
           url: '/kouture/retention',
