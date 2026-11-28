@@ -102,3 +102,25 @@ do $$ begin
 end $$;
 select 'ok: anon cannot call agent_file';
 reset role;
+
+-- The owner can complete an approved request (approved -> executed), once.
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', false);
+do $$
+declare a uuid;
+begin
+  a := kouture.agent_file('inventory_manager', 'approval',
+        '{"sourceKey":"inv:restock:test-exec","actionType":"make_purchase","title":"Restock","summary":"Gel"}');
+  update core.approvals set status = 'approved' where id = a;
+  update core.approvals set status = 'executed', decision_note = 'Marked done by you.' where id = a;
+  if (select executed_at from core.approvals where id = a) is null then
+    raise exception 'FAIL: executed_at not stamped';
+  end if;
+  begin
+    update core.approvals set status = 'failed' where id = a;
+    raise exception 'FAIL: completed request changed again';
+  exception when raise_exception then null;
+  end;
+end $$;
+select 'ok: approved requests complete once';
+reset role;

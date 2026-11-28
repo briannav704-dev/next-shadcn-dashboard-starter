@@ -23,7 +23,18 @@ const fields = {
   /** Secret iCal address of the calendar Nailzy syncs bookings into. Never commit it. */
   NAILZY_CALENDAR_URL: z
     .string()
-    .regex(/^(https|webcal):\/\/\S+$/i, 'must be the https or webcal calendar address')
+    .regex(/^(https|webcal):\/\/\S+$/i, 'must be the https or webcal calendar address'),
+  // Optional texting through Twilio. Secrets: set in Vercel only.
+  TWILIO_ACCOUNT_SID: z
+    .string()
+    .regex(/^AC[0-9a-f]{32}$/i, 'must be the Account SID (starts with AC)'),
+  TWILIO_AUTH_TOKEN: z.string().regex(/^[0-9a-f]{32}$/i, 'must be the 32-character Auth Token'),
+  TWILIO_FROM: z
+    .string()
+    .regex(
+      /^(\+1\d{10}|MG[0-9a-f]{32})$/i,
+      'must be your Twilio number (+1…) or Messaging Service SID (MG…)'
+    )
 } as const;
 
 type FieldName = keyof typeof fields;

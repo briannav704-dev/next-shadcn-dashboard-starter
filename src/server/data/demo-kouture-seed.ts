@@ -70,7 +70,7 @@ export function seedKoutureTables(opts: {
     return {
       id: id('cli'),
       fullName,
-      phone: `555-01${String(i).padStart(2, '0')}`,
+      phone: `404-555-01${String(i).padStart(2, '0')}`,
       email: `${handle}@example.com`,
       instagram: i % 2 === 0 ? `@${handle}` : null,
       birthday: `199${i % 10}-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 27) + 1).padStart(2, '0')}`,

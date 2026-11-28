@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import PageContainer from '@/components/layout/page-container';
 import { EmptyNote } from '@/components/lux/empty-note';
 import { ApprovalCard } from '@/features/core/components/approval-card';
+import { textingConnected } from '@/features/kouture/server/twilio';
 import { requireOwnerPage } from '@/server/session';
 
 export const metadata: Metadata = { title: 'Approvals' };
@@ -12,6 +13,7 @@ export default async function ApprovalsPage() {
   const approvals = await repos.core.listApprovals({ limit: 100 });
   const pending = approvals.filter((a) => a.status === 'pending');
   const decided = approvals.filter((a) => a.status !== 'pending');
+  const texting = textingConnected();
 
   return (
     <PageContainer
@@ -29,7 +31,7 @@ export default async function ApprovalsPage() {
         {pending.length === 0 ? (
           <EmptyNote>You’re all caught up.</EmptyNote>
         ) : (
-          pending.map((a) => <ApprovalCard key={a.id} approval={a} />)
+          pending.map((a) => <ApprovalCard key={a.id} approval={a} textingConnected={texting} />)
         )}
       </section>
       {decided.length > 0 && (
@@ -41,7 +43,7 @@ export default async function ApprovalsPage() {
             Decided
           </h2>
           {decided.map((a) => (
-            <ApprovalCard key={a.id} approval={a} />
+            <ApprovalCard key={a.id} approval={a} textingConnected={texting} />
           ))}
         </section>
       )}

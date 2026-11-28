@@ -86,12 +86,30 @@ export default async function ClientsPage({ searchParams }: PageProps) {
       pageTitle='Clients'
       pageDescription='Everyone who sits in your chair, with their history, preferences and consent.'
       pageHeaderAction={
-        <AddButton
-          entity='kouture.clients'
-          label='Add client'
-          title='New client'
-          fields={FORMS.client}
-        />
+        <div className='flex flex-wrap items-center gap-2'>
+          <a
+            href='/kouture/clients/export?channel=sms'
+            download
+            className='border-input hover:bg-blush/60 inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-medium'
+          >
+            <Icons.download className='size-4' aria-hidden />
+            Text list
+          </a>
+          <a
+            href='/kouture/clients/export?channel=email'
+            download
+            className='border-input hover:bg-blush/60 inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-medium'
+          >
+            <Icons.download className='size-4' aria-hidden />
+            Email list
+          </a>
+          <AddButton
+            entity='kouture.clients'
+            label='Add client'
+            title='New client'
+            fields={FORMS.client}
+          />
+        </div>
       }
     >
       <div className='grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4'>
