@@ -116,6 +116,7 @@ export const MARKETING_KINDS = [
   'message',
   'event'
 ] as const;
+export const EMAIL_AUDIENCES = ['all', 'due', 'lapsed', 'birthdays'] as const;
 export const MARKETING_STATUSES = ['idea', 'drafting', 'ready', 'scheduled', 'published'] as const;
 
 const optionalId = z
@@ -809,6 +810,46 @@ export const ENTITIES = {
     }),
     label: (r) => `${r.jurisdiction} Q${r.quarter} ${r.taxYear}`,
     paths: ['/kouture/taxes']
+  }),
+  'kouture.email_campaigns': entity({
+    schema: 'kouture',
+    table: 'email_campaigns',
+    row: z.object({
+      id,
+      title: z.string(),
+      subject: z.string(),
+      body: z.string(),
+      audience: z.enum(EMAIL_AUDIENCES),
+      status: z.enum(['draft', 'sent']),
+      sentAt: z.string().nullable(),
+      recipientCount: nullableNum,
+      createdAt: z.string()
+    }),
+    input: z.object({
+      title: text(120, 'Name'),
+      subject: text(200, 'Subject'),
+      body: text(10000, 'Message'),
+      audience: z.enum(EMAIL_AUDIENCES).default('all'),
+      status: z.enum(['draft', 'sent']).default('draft'),
+      sentAt: nullableDateTime,
+      recipientCount: z
+        .number()
+        .int()
+        .min(0)
+        .nullish()
+        .transform((v) => v ?? null)
+    }),
+    label: (r) => r.title,
+    paths: ['/kouture/email']
+  }),
+  'kouture.business_profile': entity({
+    schema: 'kouture',
+    table: 'business_profile',
+    row: z.object({ id, postalAddress: z.string().nullable() }),
+    input: z.object({ postalAddress: optionalText(300) }),
+    label: () => 'business details',
+    paths: ['/kouture/email'],
+    uniqueBy: []
   }),
   'kouture.sync_runs': entity({
     schema: 'kouture',

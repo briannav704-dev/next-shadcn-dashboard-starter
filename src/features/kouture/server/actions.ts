@@ -125,3 +125,24 @@ export async function adjustStockAction(
     return undefined;
   });
 }
+
+const sentSchema = z.object({
+  campaignId: id,
+  recipientCount: z.number().int().min(0).max(100_000)
+});
+
+/** Records that the owner sent a campaign from her mail app, with the server's time. */
+export async function markCampaignSentAction(
+  input: z.infer<typeof sentSchema>
+): Promise<ActionResult> {
+  return runAction(sentSchema, input, async ({ campaignId, recipientCount }) => {
+    const { repos } = await requireOwnerAction();
+    await repos.entities('kouture.email_campaigns').update(campaignId, {
+      status: 'sent',
+      sentAt: new Date().toISOString(),
+      recipientCount
+    });
+    revalidatePath('/kouture/email');
+    return undefined;
+  });
+}

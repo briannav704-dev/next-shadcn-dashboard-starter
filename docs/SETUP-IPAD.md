@@ -77,9 +77,9 @@ In Safari on your iPad and iPhone, open your Vercel address and tap **Share** â†
 
 ### Updating the database later
 
-`supabase/setup.sql` is for a brand-new project. If you already ran it and a later
-update adds a file in `supabase/migrations/`, paste only the new file(s) into the SQL
-Editor, oldest first, and run them once.
+`supabase/setup.sql` is for a brand-new project. When an update adds database changes,
+paste **`supabase/update.sql`** (everything new since your last update, in one file)
+into the SQL Editor and run it once.
 
 ### If something goes wrong
 

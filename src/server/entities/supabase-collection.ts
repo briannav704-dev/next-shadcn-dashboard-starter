@@ -21,6 +21,13 @@ const PAGE_SIZE = 1000;
 
 function fail(error: PgError, what: string): never {
   if (error.code === '42501') throw new AppError('FORBIDDEN', `Not allowed to ${what}.`);
+  // Table not found: a newer feature whose database update hasn't been run yet.
+  if (error.code === 'PGRST205' || error.code === '42P01') {
+    throw new AppError(
+      'INVALID',
+      'Your database needs an update. Paste supabase/update.sql into the Supabase SQL Editor and run it once.'
+    );
+  }
   if (error.code === 'PGRST116') throw new AppError('NOT_FOUND', 'That item no longer exists.');
   if (error.code === '23505') throw new AppError('CONFLICT', 'That already exists.');
   if (error.code === '23514') throw new AppError('INVALID', 'Some values are out of range.');
